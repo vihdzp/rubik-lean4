@@ -378,10 +378,10 @@ def IsAdjacent₃ (a b c : Orientation) : Prop :=
 instance IsAdjacent₃.decRel : ∀ a b c, Decidable (IsAdjacent₃ a b c) :=
   inferInstanceAs (∀ a b c, Decidable (IsAdjacent a b ∧ cross a b = c))
 
-theorem IsAdjacent₃.IsAdjacent (h : IsAdjacent₃ a b c) : IsAdjacent a b :=
+theorem IsAdjacent₃.isAdjacent (h : IsAdjacent₃ a b c) : IsAdjacent a b :=
   h.1
 
-theorem IsAdjacent.IsAdjacent₃ (h : IsAdjacent a b) : IsAdjacent₃ a b (cross a b) :=
+theorem IsAdjacent.isAdjacent₃ (h : IsAdjacent a b) : IsAdjacent₃ a b (cross a b) :=
   ⟨h, rfl⟩
 
 theorem IsAdjacent₃.congr (h₁ : IsAdjacent₃ a b c₁) (h₂ : IsAdjacent₃ a b c₂) : c₁ = c₂ :=
@@ -394,6 +394,9 @@ theorem isAdjacent₃_cyclic : IsAdjacent₃ a b c ↔ IsAdjacent₃ b c a := by
   · exact ⟨h.cross_left, cross_cross_left _ _⟩
 
 alias ⟨IsAdjacent₃.cyclic, _⟩ := isAdjacent₃_cyclic
+
+theorem IsAdjacent₃.ne (h : IsAdjacent₃ a b c) : a ≠ b ∧ b ≠ c ∧ c ≠ a :=
+  ⟨h.isAdjacent.ne, h.cyclic.isAdjacent.ne, h.cyclic.cyclic.isAdjacent.ne⟩
 
 theorem cross_rotate : ∀ {a b r : Orientation},
     IsAdjacent a b → cross (a.rotate r) (b.rotate r) = (cross a b).rotate r := by
@@ -417,13 +420,21 @@ end Orientation
 
 open Orientation
 
-/-- An edge piece can be identified with an ordered pair of adjacent orientations. The first
-orientation determines the face in which the piece lies, and the second orientation determines its
-relative orientation with respect to it. -/
+/-- An edge piece is an ordered pair of adjacent orientations.
+
+Since we identify colors and orientations, there's two possible ways to think of this type:
+
+- The position of an edge piece within a Rubik's cube, specified by its face, followed by its
+  relative orientation with respect to it. For instance, `EdgePiece.mk U B _` is the upper piece in the upper-back edge.
+- An edge piece with a particular color, within a particular edge. For instance,
+  `EdgePiece.mk U B _` is the white piece of the white-blue edge.
+
+The type `PRubik` contains an `EdgePiece ≃ EdgePiece` field, which assigns to each position in the
+cube a particular sticker color. -/
 structure EdgePiece : Type where
-  /-- The face in which this piece lies. -/
+  /-- The first and "distinguished" orientation in the edge piece. -/
   fst : Orientation
-  /-- The relative orientation of the piece with respect to its face. -/
+  /-- The second orientation in the edge piece. -/
   snd : Orientation
   /-- Both orientations are adjacent. -/
   isAdjacent : IsAdjacent fst snd
@@ -437,7 +448,7 @@ def Orientation.IsAdjacent.toEdgePiece (h : IsAdjacent a b) : EdgePiece :=
 namespace EdgePiece
 
 instance : Inhabited EdgePiece :=
-  ⟨EdgePiece.mk U L (by decide)⟩
+  ⟨EdgePiece.mk U B (by decide)⟩
 
 instance : Repr EdgePiece :=
   ⟨fun e ↦ [e.fst, e.snd].repr⟩
@@ -451,24 +462,79 @@ theorem ext {e₁ e₂ : EdgePiece} (hf : e₁.fst = e₂.fst) (hs : e₁.snd = 
   cases e₂
   simpa using ⟨hf, hs⟩
 
+/-- Builds an `EdgePiece`, automatically inferring the adjacency condition. -/
+protected def mk' (a b : Orientation) (h : IsAdjacent a b := by decide) : EdgePiece :=
+  EdgePiece.mk a b h
+
 /-- Constructs the other edge piece sharing an edge. -/
 def swap (e : EdgePiece) : EdgePiece :=
   e.isAdjacent.swap.toEdgePiece
 
+/-- Constructs the finset containing the edge's orientations. -/
+def toFinset (e : EdgePiece) : Finset Orientation :=
+  ⟨{e.fst, e.snd}, by simpa using e.isAdjacent.ne⟩
+
+theorem card_toFinset (e : EdgePiece) : e.toFinset.card = 2 :=
+  rfl
+
+@[simp]
+theorem swap_toFinset (e : EdgePiece) : e.swap.toFinset = e.toFinset := by
+  rw [toFinset]
+  simp_rw [Multiset.pair_comm]
+  rfl
+
+instance : Setoid EdgePiece where
+  r e₁ e₂ := e₁.toFinset = e₂.toFinset
+  iseqv := by
+    constructor
+    · exact fun x ↦ rfl
+    · exact Eq.symm
+    · exact Eq.trans
+
+instance : DecidableRel (α := EdgePiece) (· ≈ ·) :=
+  fun e₁ e₂ ↦ inferInstanceAs (Decidable (e₁.toFinset = e₂.toFinset))
+
 end EdgePiece
 
-/-- A corner piece can be identified with an ordered triple of pairwise adjacent orientations,
-oriented as the standard basis. The first orientation determines the face in which the piece lies,
-and the other two orientations determine its relative orientation with respect to it. -/
+/-- An edge is the equivalence class of edge pieces sharing an edge. -/
+def Edge : Type := Quotient EdgePiece.instSetoid
+
+namespace Edge
+
+@[simp]
+theorem mk_swap (e : EdgePiece) : (⟦e.swap⟧ : Edge) = ⟦e⟧ :=
+  Quotient.sound e.swap_toFinset
+
+instance : Fintype Edge :=
+  Quotient.fintype _
+
+protected theorem card : Fintype.card Edge = 12 :=
+  rfl
+
+end Edge
+
+/-- A corner piece is an ordered triple of pairwise adjacent orientations, oriented as the standard
+basis.
+
+Since we identify colors and orientations, there's two possible ways to think of this type:
+
+- The position of a corner piece within a Rubik's cube, specified by its face, followed by its
+  relative orientation with respect to it. For instance, `EdgePiece.mk U B L _` is the upper piece
+  in the upper-back-left corner.
+- A corner piece with a particular color, within a particular corner. For instance,
+  `EdgePiece.mk U B L _` is the white piece of the white-blue-orange edge.
+
+The type `PRubik` contains an `CornerPiece ≃ CornerPiece` field, which assigns to each position in
+the cube a particular sticker color. -/
 structure CornerPiece : Type where
-  /-- The face in which this piece lies. -/
+  /-- The first and "distinguished" orientation in the corner piece. -/
   fst : Orientation
-  /-- The (first) relative orientation of the piece with respect to its face. -/
+  /-- The second orientation in the corner piece. -/
   snd : Orientation
-  /-- The (second) relative orientation of the piece with respect to its face. This is actually
-  completely determined from the other two, but we still define it for symmetry. -/
+  /-- The third orientation in the corner piece. This is actually completely determined from the
+  other two, but we still define it for symmetry. -/
   thd : Orientation
-  /-- All colors are adjacent, and form a positively oriented basis. -/
+  /-- All orientations are adjacent, and form a positively oriented basis. -/
   isAdjacent₃ : IsAdjacent₃ fst snd thd
 
 deriving instance DecidableEq for CornerPiece
@@ -488,15 +554,15 @@ theorem CornerPiece.ext {c₁ c₂ : CornerPiece}
 
 /-- Edge pieces and corner pieces can be put in bijection. -/
 def EdgeCornerEquiv : EdgePiece ≃ CornerPiece where
-  toFun e := e.isAdjacent.IsAdjacent₃.toCornerPiece
-  invFun c := c.isAdjacent₃.IsAdjacent.toEdgePiece
+  toFun e := e.isAdjacent.isAdjacent₃.toCornerPiece
+  invFun c := c.isAdjacent₃.isAdjacent.toEdgePiece
   left_inv _ := rfl
   right_inv c := by ext <;> rfl
 
 namespace CornerPiece
 
 instance : Inhabited CornerPiece :=
-  ⟨CornerPiece.mk R U F (by decide)⟩
+  ⟨CornerPiece.mk U B L (by decide)⟩
 
 instance : Repr CornerPiece :=
   ⟨fun c ↦ [c.fst, c.snd, c.thd].repr⟩
@@ -511,26 +577,65 @@ protected theorem card : Fintype.card CornerPiece = 24 :=
 def cyclic (c : CornerPiece) : CornerPiece :=
   c.isAdjacent₃.cyclic.toCornerPiece
 
+/-- Constructs the finset containing the corner's orientations. -/
+def toFinset (e : CornerPiece) : Finset Orientation :=
+  ⟨{e.fst, e.snd, e.thd}, by
+    obtain ⟨h₁, h₂, h₃⟩ := e.isAdjacent₃.ne
+    simpa using ⟨⟨h₁, h₃.symm⟩, h₂⟩⟩
+
+theorem card_toFinset (c : CornerPiece) : c.toFinset.card = 3 :=
+  rfl
+
+@[simp]
+theorem cyclic_toFinset (c : CornerPiece) : c.cyclic.toFinset = c.toFinset := by
+  have : ∀ a b c : Orientation, ({a, b, c} : Multiset _) = {c, a, b} := by
+    decide
+  simp_rw [toFinset, cyclic, IsAdjacent₃.toCornerPiece, this]
+
+instance : Setoid CornerPiece where
+  r c₁ c₂ := c₁.toFinset = c₂.toFinset
+  iseqv := by
+    constructor
+    · exact fun x ↦ rfl
+    · exact Eq.symm
+    · exact Eq.trans
+
+instance : DecidableRel (α := CornerPiece) (· ≈ ·) :=
+  fun c₁ c₂ ↦ inferInstanceAs (Decidable (c₁.toFinset = c₂.toFinset))
+
 end CornerPiece
+
+/-- A corner is the equivalence class of corner pieces sharing a corner. -/
+def Corner : Type := Quotient CornerPiece.instSetoid
+
+namespace Corner
+
+@[simp]
+theorem mk_cyclic (c : CornerPiece) : (⟦c.cyclic⟧ : Corner) = ⟦c⟧ :=
+  Quotient.sound c.cyclic_toFinset
+
+instance : Fintype Corner :=
+  Quotient.fintype _
+
+protected theorem card : Fintype.card Corner = 8 :=
+  rfl
+
+end Corner
 
 /-- A pre-Rubik's cube. We represent this as a permutation of the edge pieces, and a permutation of
 the corner pieces, such that pieces in the same edge or corner get mapped to the same edge or
 corner.
 
-The returned edges and corners will be oriented in the same order as the passed orientations. For
-instance, `cube.edge R F` is some edge `e`, whose right sticker is `e.fst` and whose front sticker
-is `e.snd`.
-
-This can be thought as the type of Rubik's cubes that can be assembled, without regard for the
-solvability invariants. -/
+This can be thought as the type of Rubik's cubes that can be physically assembled, without regard
+for the solvability invariants. -/
 structure PRubik : Type where
-  /-- Returns the edge at a given orientation. -/
-  edgeEquiv : EdgePiece ≃ EdgePiece
-  /-- Returns the corner at a given orientation. -/
+  /-- Returns the edge piece at a given location. -/
+  edgePieceEquiv : EdgePiece ≃ EdgePiece
+  /-- Returns the corner piece at a given location. -/
   cornerEquiv : CornerPiece ≃ CornerPiece
-  /-- Swapping an edge's orientations results in a swapped edge. -/
-  edge_swap (e : EdgePiece) : edgeEquiv e.swap = (edgeEquiv e).swap
-  /-- Cyclically permuting a corner's orientations results in a cyclically permuted corner. -/
+  /-- Pieces in the same edge get mapped to pieces in the same edge. -/
+  edge_swap (e : EdgePiece) : edgePieceEquiv e.swap = (edgePieceEquiv e).swap
+  /-- Pieces in the same corner get mapped to pieces in the same corner. -/
   corner_cyclic (c : CornerPiece) : cornerEquiv c.cyclic = (cornerEquiv c).cyclic
 
 namespace PRubik
@@ -539,7 +644,7 @@ deriving instance DecidableEq, Fintype for PRubik
 
 /-- An auxiliary function to get an edge piece in a cube, inferring the adjacency hypothesis. -/
 def edgePiece (cube : PRubik) (a b : Orientation) (h : IsAdjacent a b := by decide) : EdgePiece :=
-  cube.edgeEquiv (EdgePiece.mk a b h)
+  cube.edgePieceEquiv (EdgePiece.mk a b h)
 
 /-- An auxiliary function to get a corner piece in a cube, inferring the adjacency hypothesis. -/
 def cornerPiece (cube : PRubik) (a b c : Orientation) (h : IsAdjacent₃ a b c := by decide) :
@@ -557,21 +662,21 @@ theorem ext (cube₁ cube₂ : PRubik)
   rw [Equiv.ext_iff, Equiv.ext_iff]
   exact ⟨fun x ↦ he _ _ x.isAdjacent, fun x ↦ hc _ _ _ x.isAdjacent₃⟩
 
-/-- The edges in a Rubik's cube. This is an auxiliary function for the `Repr` instance. -/
-def edgePieces (cube : PRubik) : List EdgePiece :=
-  [cube.edgePiece U B, cube.edgePiece U L, cube.edgePiece U R, cube.edgePiece U F,
-    cube.edgePiece L B, cube.edgePiece L F, cube.edgePiece F R, cube.edgePiece R B,
-    cube.edgePiece D B, cube.edgePiece D L, cube.edgePiece D R, cube.edgePiece D F]
+/-- A list with all non-equivalent edges. This is an auxiliary function for the `PRubik.Repr` instance. -/
+private def edges : List EdgePiece :=
+  [EdgePiece.mk' U B, EdgePiece.mk' U L, EdgePiece.mk' U R, EdgePiece.mk' U F,
+    EdgePiece.mk' L B, EdgePiece.mk' L F, EdgePiece.mk' F R, EdgePiece.mk' R B,
+    EdgePiece.mk' D B, EdgePiece.mk' D L, EdgePiece.mk' D R, EdgePiece.mk' D F]
 
 /-- The corners in a Rubik's cube. This is an auxiliary function for the `Repr` instance. -/
-def cornerPieces (cube : PRubik) : List CornerPiece :=
+private def corners (cube : PRubik) : List CornerPiece :=
   [cube.cornerPiece U B L, cube.cornerPiece U R B, cube.cornerPiece U L F, cube.cornerPiece U F R,
     cube.cornerPiece D L B, cube.cornerPiece D B R, cube.cornerPiece D F L, cube.cornerPiece D R F]
 
 open Std.Format in
 instance : Repr PRubik := ⟨fun cube _ ↦
-  letI e := cube.edgePieces
-  letI c := cube.cornerPieces
+  let e := edges.map cube.edgePieceEquiv
+  let c := cube.corners
   have : e.length = 12 := rfl
   have : c.length = 8 := rfl
   let space := text "⬛⬛⬛"
@@ -596,7 +701,7 @@ instance : Repr PRubik := ⟨fun cube _ ↦
 
 /-- A solved Rubik's cube. -/
 def Solved : PRubik where
-  edgeEquiv := Equiv.refl _
+  edgePieceEquiv := Equiv.refl _
   cornerEquiv := Equiv.refl _
   edge_swap _ := rfl
   corner_cyclic _ := rfl
@@ -606,11 +711,14 @@ instance : Inhabited PRubik :=
 
 #eval Solved
 
-#exit
+private def rotate_edgePiece (cube : PRubik) (e : EdgePiece) (r : Orientation) : EdgePiece :=
+  if r ∈ e.toFinset then cube.edgePieceEquiv (e.isAdjacent.rotate r).toEdgePiece else cube.edgePieceEquiv e
 
+
+#exit
 /-- Applies a clockwise rotation to a Rubik's cube. -/
 def rotate (cube : PRubik) (r : Orientation) : PRubik where
-  edgeEquiv e := if r = a ∨ r = b
+  edgePieceEquiv e := if r = a ∨ r = b
     then cube.edge _ _ (h.rotate r)
     else cube.edge e
   cornerEquiv c := if r = a ∨ r = b ∨ r = c
