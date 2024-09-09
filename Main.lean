@@ -441,10 +441,6 @@ structure EdgePiece : Type where
 
 deriving instance DecidableEq, Fintype for EdgePiece
 
-/-- Builds an edge piece from adjacent orientations. -/
-def Orientation.IsAdjacent.toEdgePiece (h : IsAdjacent a b) : EdgePiece :=
-  EdgePiece.mk a b h
-
 namespace EdgePiece
 
 instance : Inhabited EdgePiece :=
@@ -468,7 +464,19 @@ protected def mk' (a b : Orientation) (h : IsAdjacent a b := by decide) : EdgePi
 
 /-- Constructs the other edge piece sharing an edge. -/
 def swap (e : EdgePiece) : EdgePiece :=
-  e.isAdjacent.swap.toEdgePiece
+  ⟨_, _, e.isAdjacent.swap⟩
+
+@[simp]
+theorem swap_mk (h : IsAdjacent a b) : swap ⟨a, b, h⟩ = ⟨b, a, h.swap⟩ :=
+  rfl
+
+@[simp]
+theorem swap_fst (e : EdgePiece) : e.swap.fst = e.snd :=
+  rfl
+
+@[simp]
+theorem swap_snd (e : EdgePiece) : e.swap.snd = e.fst :=
+  rfl
 
 /-- Constructs the finset containing the edge's orientations. -/
 def toFinset (e : EdgePiece) : Finset Orientation :=
@@ -554,8 +562,8 @@ theorem CornerPiece.ext {c₁ c₂ : CornerPiece}
 
 /-- Edge pieces and corner pieces can be put in bijection. -/
 def EdgeCornerEquiv : EdgePiece ≃ CornerPiece where
-  toFun e := e.isAdjacent.isAdjacent₃.toCornerPiece
-  invFun c := c.isAdjacent₃.isAdjacent.toEdgePiece
+  toFun e := ⟨_, _, _, e.isAdjacent.isAdjacent₃⟩
+  invFun c := ⟨_, _, c.isAdjacent₃.isAdjacent⟩
   left_inv _ := rfl
   right_inv c := by ext <;> rfl
 
@@ -576,6 +584,22 @@ protected theorem card : Fintype.card CornerPiece = 24 :=
 /-- Permutes the colors in a corner cyclically. -/
 def cyclic (c : CornerPiece) : CornerPiece :=
   c.isAdjacent₃.cyclic.toCornerPiece
+
+@[simp]
+theorem cyclic_mk (h : IsAdjacent₃ a b c) : cyclic ⟨a, b, c, h⟩ = ⟨b, c, a, h.cyclic⟩ :=
+  rfl
+
+@[simp]
+theorem cyclic_fst (c : CornerPiece) : c.cyclic.fst = c.snd :=
+  rfl
+
+@[simp]
+theorem cyclic_snd (c : CornerPiece) : c.cyclic.snd = c.thd :=
+  rfl
+
+@[simp]
+theorem cyclic_thd (c : CornerPiece) : c.cyclic.thd = c.fst :=
+  rfl
 
 /-- Constructs the finset containing the corner's orientations. -/
 def toFinset (e : CornerPiece) : Finset Orientation :=
@@ -632,15 +656,28 @@ structure PRubik : Type where
   /-- Returns the edge piece at a given location. -/
   edgePieceEquiv : EdgePiece ≃ EdgePiece
   /-- Returns the corner piece at a given location. -/
-  cornerEquiv : CornerPiece ≃ CornerPiece
+  cornerPieceEquiv : CornerPiece ≃ CornerPiece
   /-- Pieces in the same edge get mapped to pieces in the same edge. -/
   edge_swap (e : EdgePiece) : edgePieceEquiv e.swap = (edgePieceEquiv e).swap
   /-- Pieces in the same corner get mapped to pieces in the same corner. -/
-  corner_cyclic (c : CornerPiece) : cornerEquiv c.cyclic = (cornerEquiv c).cyclic
+  corner_cyclic (c : CornerPiece) : cornerPieceEquiv c.cyclic = (cornerPieceEquiv c).cyclic
+
+attribute [simp] PRubik.edge_swap PRubik.corner_cyclic
 
 namespace PRubik
 
 deriving instance DecidableEq, Fintype for PRubik
+
+@[ext]
+theorem ext (cube₁ cube₂ : PRubik)
+    (he : ∀ e, cube₁.edgePieceEquiv e = cube₂.edgePieceEquiv e)
+    (hc : ∀ c, cube₁.cornerPieceEquiv c = cube₂.cornerPieceEquiv c) :
+    cube₁ = cube₂ := by
+  obtain ⟨e₁, c₁, _, _⟩ := cube₁
+  obtain ⟨e₂, c₂, _, _⟩ := cube₂
+  simp
+  rw [Equiv.ext_iff, Equiv.ext_iff]
+  exact ⟨he, hc⟩
 
 /-- An auxiliary function to get an edge piece in a cube, inferring the adjacency hypothesis. -/
 def edgePiece (cube : PRubik) (a b : Orientation) (h : IsAdjacent a b := by decide) : EdgePiece :=
@@ -649,18 +686,7 @@ def edgePiece (cube : PRubik) (a b : Orientation) (h : IsAdjacent a b := by deci
 /-- An auxiliary function to get a corner piece in a cube, inferring the adjacency hypothesis. -/
 def cornerPiece (cube : PRubik) (a b c : Orientation) (h : IsAdjacent₃ a b c := by decide) :
     CornerPiece :=
-  cube.cornerEquiv (CornerPiece.mk a b c h)
-
-@[ext]
-theorem ext (cube₁ cube₂ : PRubik)
-    (he : ∀ a b (h : IsAdjacent a b), cube₁.edgePiece a b h = cube₂.edgePiece a b h)
-    (hc : ∀ a b c (h : IsAdjacent₃ a b c), cube₁.cornerPiece a b c h = cube₂.cornerPiece a b c h) :
-    cube₁ = cube₂ := by
-  obtain ⟨e₁, c₁, _, _⟩ := cube₁
-  obtain ⟨e₂, c₂, _, _⟩ := cube₂
-  simp
-  rw [Equiv.ext_iff, Equiv.ext_iff]
-  exact ⟨fun x ↦ he _ _ x.isAdjacent, fun x ↦ hc _ _ _ x.isAdjacent₃⟩
+  cube.cornerPieceEquiv (CornerPiece.mk a b c h)
 
 /-- A list with all non-equivalent edges. This is an auxiliary function for the `PRubik.Repr` instance. -/
 private def edges : List EdgePiece :=
@@ -700,40 +726,124 @@ instance : Repr PRubik := ⟨fun cube _ ↦
     ++ space ++ c[0].snd ++ e[0].snd ++ c[1].thd ++ space⟩
 
 /-- A solved Rubik's cube. -/
-def Solved : PRubik where
+@[simps]
+protected def id : PRubik where
   edgePieceEquiv := Equiv.refl _
-  cornerEquiv := Equiv.refl _
+  cornerPieceEquiv := Equiv.refl _
   edge_swap _ := rfl
   corner_cyclic _ := rfl
 
-instance : Inhabited PRubik :=
-  ⟨Solved⟩
+instance : Inhabited PRubik := ⟨PRubik.id⟩
 
-#eval Solved
+/-- The composition of two Rubik's cubes is the Rubik's cube where the second's scramble is
+performed after the first's.
 
-private def rotate_edgePiece (cube : PRubik) (e : EdgePiece) (r : Orientation) : EdgePiece :=
-  if r ∈ e.toFinset then cube.edgePieceEquiv (e.isAdjacent.rotate r).toEdgePiece else cube.edgePieceEquiv e
+Note that this is opposite to the usual convention for function composition. -/
+@[simps]
+protected def trans (cube₁ cube₂ : PRubik) : PRubik where
+  edgePieceEquiv := cube₂.edgePieceEquiv.trans cube₁.edgePieceEquiv
+  cornerPieceEquiv := cube₂.cornerPieceEquiv.trans cube₁.cornerPieceEquiv
+  edge_swap _ := by
+    dsimp
+    rw [cube₂.edge_swap, cube₁.edge_swap]
+  corner_cyclic _ := by
+    dsimp
+    rw [cube₂.corner_cyclic, cube₁.corner_cyclic]
 
+@[simp]
+theorem id_trans (cube : PRubik) : PRubik.id.trans cube = cube := by
+  apply PRubik.ext <;>
+  intros <;>
+  rfl
 
-#exit
+@[simp]
+theorem trans_id (cube : PRubik) : cube.trans PRubik.id = cube := by
+  apply PRubik.ext <;>
+  intros <;>
+  rfl
+
+theorem trans_assoc (cube₁ cube₂ cube₃ : PRubik) :
+    (cube₁.trans cube₂).trans cube₃ = cube₁.trans (cube₂.trans cube₃) := by
+  apply PRubik.ext <;>
+  intros <;>
+  rfl
+
+/-- The inverse of a Rubik's cube is obtained -/
+@[simps]
+protected def symm (cube : PRubik) : PRubik where
+  edgePieceEquiv := cube.edgePieceEquiv.symm
+  cornerPieceEquiv := cube.cornerPieceEquiv.symm
+  edge_swap e := by
+    conv_rhs => rw [← cube.edgePieceEquiv.symm_apply_apply (EdgePiece.swap _)]
+    rw [cube.edge_swap, Equiv.apply_symm_apply]
+  corner_cyclic e := by
+    conv_rhs => rw [← cube.cornerPieceEquiv.symm_apply_apply (CornerPiece.cyclic _)]
+    rw [cube.corner_cyclic, Equiv.apply_symm_apply]
+
+@[simp]
+theorem trans_symm (cube : PRubik) : cube.trans cube.symm = PRubik.id := by
+  apply PRubik.ext <;>
+  intros <;>
+  simp
+
+@[simp]
+theorem symm_trans (cube : PRubik) : cube.symm.trans cube = PRubik.id := by
+  apply PRubik.ext <;>
+  intros <;>
+  simp
+
+/-- The "pre-Rubik's cube" group. This isn't the true Rubik's cube group as it contains positions
+that are unreachable by valid moves. -/
+instance : Group PRubik where
+  one := PRubik.id
+  mul := PRubik.trans
+  mul_assoc := trans_assoc
+  one_mul := id_trans
+  mul_one := trans_id
+  inv := PRubik.symm
+  inv_mul_cancel := symm_trans
+
+/-- Applies a **counterclockwise** rotation to an edge piece. -/
+private def rotate_edgePiece (r : Orientation) : EdgePiece → EdgePiece :=
+  fun e ↦ if r ∈ e.toFinset then ⟨_, _, e.isAdjacent.rotate r⟩ else e
+
+theorem rotate_edgePiece₄ : ∀ r : Orientation, (rotate_edgePiece r)^[4] = id := by
+  decide
+
+/-- Applies a **counterclockwise** rotation to a corner piece. -/
+private def rotate_cornerPiece (r : Orientation) : CornerPiece → CornerPiece :=
+  fun c ↦ if r ∈ c.toFinset then ⟨_, _, _, c.isAdjacent₃.rotate r⟩ else c
+
+theorem rotate_cornerPiece₄ : ∀ r : Orientation, (rotate_cornerPiece r)^[4] = id := by
+  decide
+
+/-- Defines the Rubik's cube where only a single **clockwise** move in a given orientation is
+performed. -/
+def ofOrientation (r : Orientation) : PRubik where
+  edgePieceEquiv := ⟨
+      rotate_edgePiece r,
+      (rotate_edgePiece r)^[3],
+      funext_iff.1 (rotate_edgePiece₄ r),
+      funext_iff.1 (rotate_edgePiece₄ r)⟩
+  cornerPieceEquiv := ⟨
+      rotate_cornerPiece r,
+      (rotate_cornerPiece r)^[3],
+      funext_iff.1 (rotate_cornerPiece₄ r),
+      funext_iff.1 (rotate_cornerPiece₄ r)⟩
+  edge_swap e := by
+    dsimp
+    simp_rw [rotate_edgePiece, EdgePiece.swap_toFinset]
+    split <;>
+    rfl
+  corner_cyclic c := by
+    dsimp
+    simp_rw [rotate_cornerPiece, CornerPiece.cyclic_toFinset]
+    split <;>
+    rfl
+
 /-- Applies a clockwise rotation to a Rubik's cube. -/
-def rotate (cube : PRubik) (r : Orientation) : PRubik where
-  edgePieceEquiv e := if r = a ∨ r = b
-    then cube.edge _ _ (h.rotate r)
-    else cube.edge e
-  cornerEquiv c := if r = a ∨ r = b ∨ r = c
-    then cube.corner _ _ _ (h.rotate r)
-    else cube.corner c
-  edge_swap h := by
-    simp_rw [or_comm]
-    split <;>
-    rw [cube.edge_swap]
-  corner_cyclic := @fun a b c h ↦ by
-    simp_rw [@or_rotate (r = a)]
-    split <;>
-    rw [cube.corner_cyclic]
-
-    #exit
+def rotate (cube : PRubik) (r : Orientation) : PRubik :=
+  cube.trans (ofOrientation r)
 
 end PRubik
 
@@ -792,34 +902,16 @@ def B' : Moves := B2 ++ B
 
 end Moves
 
-namespace Rubik
+namespace PRubik
 
 /-- Applies a sequence of moves to a Rubik's cube. -/
-def Move (cube : Rubik) (m : Moves) : Rubik :=
-  m.foldl Rubik.rotate cube
+def move (cube : PRubik) (m : Moves) : PRubik :=
+  m.foldl PRubik.rotate cube
 
-theorem move_append (cube : Rubik) (m n : Moves) : cube.Move (m ++ n) = (cube.Move m).Move n :=
+theorem move_append (cube : PRubik) (m n : Moves) : cube.move (m ++ n) = (cube.move m).move n :=
   List.foldl_append _ _ _ _
 
-end Rubik
+end PRubik
 
-instance Moves.instSetoid : Setoid Moves where
-  r m n := Rubik.Solved.Move m = Rubik.Solved.Move n
-  iseqv := by
-    constructor
-    exacts [fun _ ↦ rfl, Eq.symm, Eq.trans]
-
-/-- The Rubik's cube group is defined as the set of possible move sequences up to equivalence. -/
-def RubikGroup : Type := Quotient Moves.instSetoid
-
-instance : Group RubikGroup where
-  mul a b := by
-    refine Quotient.lift₂ (fun m n ↦ ⟦m ++ n⟧) ?_ a b
-    intro m₁ m₂ n₁ n₂ hm hn
-    apply Quotient.sound
-    change _ = _ at *
-    rw [Rubik.move_append, Rubik.move_append, hm, hn]
-
-
-/-#eval Rubik.Solved.Move [U, R, R, F, B, R, B, B, R, U, U, L, B, B, R, U, U, U, D, D, D, R, R,
-  F, R, R, R, L, B, B, U, U, F, F]-/
+#eval PRubik.id.move [U, R, R, F, B, R, B, B, R, U, U, L, B, B, R, U, U, U, D, D, D, R, R,
+  F, R, R, R, L, B, B, U, U, F, F]
