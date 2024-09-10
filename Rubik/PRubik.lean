@@ -15,11 +15,11 @@ structure PRubik : Type where
   /-- Returns the corner piece at a given location. -/
   cornerPieceEquiv : Perm CornerPiece
   /-- Pieces in the same edge get mapped to pieces in the same edge. -/
-  edge_swap (e : EdgePiece) : edgePieceEquiv e.swap = (edgePieceEquiv e).swap
+  edge_flip (e : EdgePiece) : edgePieceEquiv e.flip = (edgePieceEquiv e).flip
   /-- Pieces in the same corner get mapped to pieces in the same corner. -/
   corner_cyclic (c : CornerPiece) : cornerPieceEquiv c.cyclic = (cornerPieceEquiv c).cyclic
 
-attribute [simp] PRubik.edge_swap PRubik.corner_cyclic
+attribute [simp] PRubik.edge_flip PRubik.corner_cyclic
 
 namespace PRubik
 
@@ -103,15 +103,15 @@ instance : Mul PRubik :=
     refine ⟨cube₂.edgePieceEquiv.trans cube₁.edgePieceEquiv,
       cube₂.cornerPieceEquiv.trans cube₁.cornerPieceEquiv, fun e ↦ ?_, fun c ↦ ?_⟩
     · dsimp
-      rw [cube₂.edge_swap, cube₁.edge_swap]
+      rw [cube₂.edge_flip, cube₁.edge_flip]
     · dsimp
       rw [cube₂.corner_cyclic, cube₁.corner_cyclic]⟩
 
 @[simp]
-theorem edge_swap_symm (cube : PRubik) (e : EdgePiece) :
-    cube.edgePieceEquiv.symm e.swap = (cube.edgePieceEquiv.symm e).swap := by
-  conv_rhs => rw [← cube.edgePieceEquiv.symm_apply_apply (EdgePiece.swap _)]
-  rw [cube.edge_swap, Equiv.apply_symm_apply]
+theorem edge_flip_symm (cube : PRubik) (e : EdgePiece) :
+    cube.edgePieceEquiv.symm e.flip = (cube.edgePieceEquiv.symm e).flip := by
+  conv_rhs => rw [← cube.edgePieceEquiv.symm_apply_apply (EdgePiece.flip _)]
+  rw [cube.edge_flip, Equiv.apply_symm_apply]
 
 @[simp]
 theorem corner_cyclic_symm (cube : PRubik) (c : CornerPiece) :
@@ -123,8 +123,8 @@ theorem edgePieceEquiv_equiv (cube : PRubik) {e₁ e₂ : EdgePiece} (h : e₁ �
     cube.edgePieceEquiv e₁ ≈ cube.edgePieceEquiv e₂ := by
   obtain rfl | rfl := EdgePiece.equiv_iff.1 h
   · rfl
-  · rw [edge_swap]
-    exact EdgePiece.swap_equiv _
+  · rw [edge_flip]
+    exact EdgePiece.flip_equiv _
 
 theorem cornerPieceEquiv_equiv (cube : PRubik) {c₁ c₂ : CornerPiece} (h : c₁ ≈ c₂) :
     cube.cornerPieceEquiv c₁ ≈ cube.cornerPieceEquiv c₂ := by
@@ -139,7 +139,7 @@ theorem cornerPieceEquiv_equiv (cube : PRubik) {c₁ c₂ : CornerPiece} (h : c�
 @[simps]
 instance : Inv PRubik :=
   ⟨fun cube ↦ ⟨cube.edgePieceEquiv.symm, cube.cornerPieceEquiv.symm,
-    cube.edge_swap_symm, cube.corner_cyclic_symm⟩⟩
+    cube.edge_flip_symm, cube.corner_cyclic_symm⟩⟩
 
 /-- The "pre-Rubik's cube" group. This isn't the true Rubik's cube group as it contains positions
 that are unreachable by valid moves. -/
@@ -172,14 +172,14 @@ def edgeEquiv : PRubik →* Perm Edge where
       apply Quotient.sound
       obtain rfl | rfl := EdgePiece.equiv_iff.1 h
       · rfl
-      · rw [cube.edge_swap]
-        exact EdgePiece.swap_equiv _
+      · rw [cube.edge_flip]
+        exact EdgePiece.flip_equiv _
     · intro e₁ e₂ h
       apply Quotient.sound
       obtain rfl | rfl := EdgePiece.equiv_iff.1 h
       · rfl
-      · rw [cube.edge_swap_symm]
-        exact EdgePiece.swap_equiv _
+      · rw [cube.edge_flip_symm]
+        exact EdgePiece.flip_equiv _
     · refine Quotient.inductionOn e ?_
       intro
       simp_rw [Quotient.lift_mk, Equiv.symm_apply_apply]
@@ -247,12 +247,46 @@ This is an invariant under any valid move. -/
 def parity : PRubik →* ℤˣ :=
   (Perm.sign.comp edgeEquiv) * (Perm.sign.comp cornerEquiv)
 
+/-- The Rubik's cube with a single edge swapped with its counterclockwise edge in the same face. -/
+def singleEdgeSwap (h : IsAdjacent a b) : PRubik where
+  edgePieceEquiv := (swap ⟨a, b, h⟩ ⟨a, cross a b, h.cross_left.symm⟩).trans
+    (swap ⟨b, a, h.symm⟩ ⟨cross a b, a, h.cross_left⟩)
+  cornerPieceEquiv := Equiv.refl _
+  edge_flip := by
+    revert a b
+    decide
+  corner_cyclic _ := rfl
+
 /-- The parity of flipped edges in a Rubik's cube can be measured as the parity of the edge piece
 permutation.
 
 This is an invariant under any valid move. -/
 def edgeFlip : PRubik →* ℤˣ :=
   Perm.sign.comp edgePieceEquivHom
+
+/-- Flips a single edge. -/
+private def singleEdgeFlipAux (e : EdgePiece) : PRubik where
+  edgePieceEquiv := swap e e.flip
+  cornerPieceEquiv := Equiv.refl _
+  edge_flip e' := by
+    obtain rfl | he := eq_or_ne e' e
+    · rw [swap_apply_right, swap_apply_left, EdgePiece.flip₂]
+    · obtain rfl | he' := eq_or_ne e' e.flip
+      · rw [swap_apply_right, EdgePiece.flip₂, swap_apply_left]
+      · rw [swap_apply_of_ne_of_ne he he', swap_apply_of_ne_of_ne] <;>
+        rwa [ne_eq, ← EdgePiece.flip_inj]
+  corner_cyclic _ := rfl
+
+/-- Flips a single edge. -/
+def singleEdgeFlip (e : Edge) : PRubik :=
+  Quotient.liftOn e singleEdgeFlipAux (by
+    intro e₁ e₂ h
+    obtain rfl | rfl := EdgePiece.equiv_iff.1 h
+    · rfl
+    · ext
+      · dsimp [singleEdgeFlipAux]
+        rw [swap_comm]
+      · rfl)
 
 theorem cornerPieceEquiv_value (cube : PRubik) (c : CornerPiece) (a : Axis) :
     (cube.cornerPieceEquiv c).value a =
@@ -299,11 +333,40 @@ def cornerRotation : PRubik →* Multiplicative (ZMod 3) where
     rw [Finset.prod_equiv (cornerEquiv cube₂)] <;>
     simp
 
-/-- The **Rubik's cube invariant**. A Rubik's cube is solvable iff it lies in the kernel of this
-homomorphism. -/
+/-- Rotates a single corner **clockwise**. -/
+def singleCornerRotationAux (c : CornerPiece) : PRubik where
+  edgePieceEquiv := Equiv.refl _
+  cornerPieceEquiv := (swap c c.cyclic).trans (swap c c.cyclic.cyclic)
+  edge_flip _ := rfl
+  corner_cyclic := by
+    revert c
+    decide
+
+/-- Rotates a single corner **clockwise**. -/
+def singleCornerRotation (c : Corner) : PRubik :=
+  Quotient.liftOn c singleCornerRotationAux (by
+    intro c₁ c₂ h
+    obtain rfl | rfl | rfl := CornerPiece.equiv_iff.1 h
+    · rfl
+    · ext c'
+      · rfl
+      · revert c₂ c'
+        decide
+    · ext c'
+      · rfl
+      · revert c₁ c'
+        decide)
+
+/-- The **Rubik's cube invariant**. This is the combined `parity`, `edgeFlip`, and `cornerRotation`
+of a Rubik's cube.
+
+A Rubik's cube is solvable iff it lies in the kernel of this homomorphism. -/
 def invariant : PRubik →* ℤˣ × ℤˣ × Multiplicative (ZMod 3) :=
   parity.prod <| edgeFlip.prod cornerRotation
 
+theorem invariant_surk
+
+#exit
 /-- A Rubik's cube is valid when it has invariant 1. We show that this condition is equivalent to
 being solvable. -/
 def IsValid (cube : PRubik) : Prop :=
@@ -332,6 +395,13 @@ end PRubik
 def Rubik : Subgroup PRubik :=
   PRubik.invariant.ker
 
+namespace Rubik
+
 /-- Construct a Rubik's cube, inferring the validity hypothesis. -/
-def Rubik.mk (cube : PRubik) (h : PRubik.IsValid cube := by decide) : Rubik :=
+def mk (cube : PRubik) (h : PRubik.IsValid cube := by decide) : Rubik :=
   ⟨cube, h⟩
+
+instance : Repr Rubik :=
+  ⟨fun cube ↦ reprPrec cube.1⟩
+
+end Rubik

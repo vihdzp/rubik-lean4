@@ -272,7 +272,7 @@ theorem IsAdjacent.ne (h : IsAdjacent a b) : a ≠ b := by
 theorem isAdjacent_comm : IsAdjacent a b ↔ IsAdjacent b a :=
   ne_comm
 
-alias ⟨IsAdjacent.swap, _⟩ := isAdjacent_comm
+alias ⟨IsAdjacent.symm, _⟩ := isAdjacent_comm
 
 /-- Given two adjacent orientations, returns the "cross product", i.e. the orientation `c` adjacent
 to both, such that `(a, b, c)` is oriented as the standard basis. -/

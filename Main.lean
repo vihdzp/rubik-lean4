@@ -29,9 +29,9 @@ def ofOrientation (r : Orientation) : PRubik where
       (rotate_cornerPiece r)^[3],
       funext_iff.1 (rotate_cornerPiece₄ r),
       funext_iff.1 (rotate_cornerPiece₄ r)⟩
-  edge_swap e := by
+  edge_flip e := by
     dsimp
-    simp_rw [rotate_edgePiece, EdgePiece.swap_toFinset]
+    simp_rw [rotate_edgePiece, EdgePiece.flip_toFinset]
     split <;>
     rfl
   corner_cyclic c := by

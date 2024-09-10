@@ -38,34 +38,46 @@ protected theorem card : Fintype.card EdgePiece = 24 :=
 protected theorem ne (e : EdgePiece) : e.fst ≠ e.snd :=
   e.isAdjacent.ne
 
+-- Not marked as `ext` since it creates undesirable goals with `PRubik.ext`.
 theorem ext {e₁ e₂ : EdgePiece} (hf : e₁.fst = e₂.fst) (hs : e₁.snd = e₂.snd) : e₁ = e₂ := by
   cases e₁
   cases e₂
   simpa using ⟨hf, hs⟩
 
+theorem ext_iff {e₁ e₂ : EdgePiece} : e₁ = e₂ ↔ e₁.fst = e₂.fst ∧ e₁.snd = e₂.snd := by
+  constructor
+  · rintro rfl
+    exact ⟨rfl, rfl⟩
+  · rintro ⟨hf, hs⟩
+    exact ext hf hs
+
 /-- Builds an `EdgePiece`, automatically inferring the adjacency condition. -/
-protected def mk' (a b : Orientation) (h : IsAdjacent a b := by decide) : EdgePiece :=
+protected abbrev mk' (a b : Orientation) (h : IsAdjacent a b := by decide) : EdgePiece :=
   EdgePiece.mk a b h
 
 /-- Constructs the other edge piece sharing an edge. -/
-def swap (e : EdgePiece) : EdgePiece :=
-  ⟨_, _, e.isAdjacent.swap⟩
+def flip (e : EdgePiece) : EdgePiece :=
+  ⟨_, _, e.isAdjacent.symm⟩
 
 @[simp]
-theorem swap_mk (h : IsAdjacent a b) : swap ⟨a, b, h⟩ = ⟨b, a, h.swap⟩ :=
+theorem flip_mk (h : IsAdjacent a b) : flip ⟨a, b, h⟩ = ⟨b, a, h.symm⟩ :=
   rfl
 
 @[simp]
-theorem swap_fst (e : EdgePiece) : e.swap.fst = e.snd :=
+theorem flip_fst (e : EdgePiece) : e.flip.fst = e.snd :=
   rfl
 
 @[simp]
-theorem swap_snd (e : EdgePiece) : e.swap.snd = e.fst :=
+theorem flip_snd (e : EdgePiece) : e.flip.snd = e.fst :=
   rfl
 
 @[simp]
-theorem swap₂ (e : EdgePiece) : e.swap.swap = e :=
+theorem flip₂ (e : EdgePiece) : e.flip.flip = e :=
   rfl
+
+@[simp]
+theorem flip_inj {e₁ e₂ : EdgePiece} : e₁.flip = e₂.flip ↔ e₁ = e₂ :=
+  (Function.LeftInverse.injective flip₂).eq_iff
 
 /-- Constructs the finset containing the edge's orientations. -/
 def toFinset (e : EdgePiece) : Finset Orientation :=
@@ -83,7 +95,7 @@ theorem mem_toFinset (e : EdgePiece) (a : Orientation) :
   simp
 
 @[simp]
-theorem swap_toFinset (e : EdgePiece) : e.swap.toFinset = e.toFinset := by
+theorem flip_toFinset (e : EdgePiece) : e.flip.toFinset = e.toFinset := by
   rw [toFinset]
   simp_rw [Multiset.pair_comm]
   rfl
@@ -99,7 +111,7 @@ instance : Setoid EdgePiece where
 theorem equiv_def {e₁ e₂ : EdgePiece} : e₁ ≈ e₂ ↔ e₁.toFinset = e₂.toFinset :=
   Iff.rfl
 
-theorem equiv_iff : ∀ {e₁ e₂ : EdgePiece}, e₁ ≈ e₂ ↔ e₁ = e₂ ∨ e₁ = e₂.swap := by
+theorem equiv_iff : ∀ {e₁ e₂ : EdgePiece}, e₁ ≈ e₂ ↔ e₁ = e₂ ∨ e₁ = e₂.flip := by
   simp_rw [equiv_def]
   decide
 
@@ -111,8 +123,8 @@ simp-/
 instance : DecidableRel (α := EdgePiece) (· ≈ ·) :=
   fun _ _ ↦ decidable_of_iff _ equiv_iff.symm
 
-theorem swap_equiv (e : EdgePiece) : e.swap ≈ e :=
-  e.swap_toFinset
+theorem flip_equiv (e : EdgePiece) : e.flip ≈ e :=
+  e.flip_toFinset
 
 end EdgePiece
 
@@ -130,9 +142,13 @@ instance : DecidableEq Edge :=
 instance : Fintype Edge :=
   Quotient.fintype _
 
+/-- Builds an `Edge`, automatically inferring the adjacency condition. -/
+protected abbrev mk (a b : Orientation) (h : IsAdjacent a b := by decide) : Edge :=
+  ⟦EdgePiece.mk a b h⟧
+
 @[simp]
-theorem mk_swap (e : EdgePiece) : (⟦e.swap⟧ : Edge) = ⟦e⟧ :=
-  Quotient.sound e.swap_equiv
+theorem mk_flip (e : EdgePiece) : (⟦e.flip⟧ : Edge) = ⟦e⟧ :=
+  Quotient.sound e.flip_equiv
 
 protected theorem card : Fintype.card Edge = 12 :=
   rfl
@@ -167,6 +183,7 @@ deriving instance DecidableEq for CornerPiece
 
 namespace CornerPiece
 
+-- Not marked as `ext` since it creates undesirable goals with `PRubik.ext`.
 theorem ext {c₁ c₂ : CornerPiece}
     (hf : c₁.fst = c₂.fst) (hs : c₁.snd = c₂.snd) : c₁ = c₂ := by
   obtain ⟨f₁, s₁, t₁, h₁⟩ := c₁
@@ -174,6 +191,17 @@ theorem ext {c₁ c₂ : CornerPiece}
   dsimp at *
   subst hf hs
   simpa using h₁.congr h₂
+
+theorem ext_iff {c₁ c₂ : CornerPiece} : c₁ = c₂ ↔ c₁.fst = c₂.fst ∧ c₁.snd = c₂.snd := by
+  constructor
+  · rintro rfl
+    exact ⟨rfl, rfl⟩
+  · rintro ⟨hf, hs⟩
+    exact ext hf hs
+
+/-- Builds a `CornerPiece`, automatically inferring the adjacency condition. -/
+protected abbrev mk' (a b c : Orientation) (h : IsAdjacent₃ a b c := by decide) : CornerPiece :=
+  CornerPiece.mk a b c h
 
 theorem isAdjacent (c : CornerPiece) : IsAdjacent c.fst c.snd :=
   c.isAdjacent₃.isAdjacent
@@ -223,6 +251,13 @@ theorem cyclic_thd (c : CornerPiece) : c.cyclic.thd = c.fst :=
 @[simp]
 theorem cyclic₃ (c : CornerPiece) : c.cyclic.cyclic.cyclic = c :=
   rfl
+
+@[simp]
+theorem cyclic_inj {c₁ c₂ : CornerPiece} : c₁.cyclic = c₂.cyclic ↔ c₁ = c₂ := by
+  constructor
+  · exact congr_arg (cyclic ∘ cyclic)
+  · rintro rfl
+    rfl
 
 theorem axis_thd (c : CornerPiece) : c.thd.axis = c.fst.axis.other c.snd.axis := by
   rw [c.isAdjacent₃.eq_cross, axis_cross]
@@ -358,6 +393,10 @@ instance : DecidableEq Corner :=
 
 instance : Fintype Corner :=
   Quotient.fintype _
+
+/-- Builds a `Corner`, automatically inferring the adjacency condition. -/
+protected abbrev mk (a b c : Orientation) (h : IsAdjacent₃ a b c := by decide) : Corner :=
+  ⟦CornerPiece.mk a b c h⟧
 
 @[simp]
 theorem mk_cyclic (c : CornerPiece) : (⟦c.cyclic⟧ : Corner) = ⟦c⟧ :=
