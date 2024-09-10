@@ -250,11 +250,6 @@ theorem sign_neg (a : Orientation) : (-a).sign = !a.sign :=
 theorem axis_neg (a : Orientation) : (-a).axis = a.axis :=
   rfl
 
-theorem eq_or_neg_of_eq_axis (h : axis a = axis b) : a = b ∨ a = -b := by
-  obtain hs | hs := Bool.eq_or_eq_not a.sign b.sign
-  · exact Or.inl (ext hs h)
-  · exact Or.inr (ext hs h)
-
 /-- Two orientations are adjacent when they have distinct axes. -/
 def IsAdjacent (a b : Orientation) : Prop :=
   a.axis ≠ b.axis
@@ -373,25 +368,28 @@ The orientation condition is required, since it's not physically possible to exc
 a corner without dissassembling it. -/
 @[pp_nodot]
 def IsAdjacent₃ (a b c : Orientation) : Prop :=
-  IsAdjacent a b ∧ cross a b = c
+  IsAdjacent a b ∧ c = cross a b
 
 instance IsAdjacent₃.decRel : ∀ a b c, Decidable (IsAdjacent₃ a b c) :=
-  inferInstanceAs (∀ a b c, Decidable (IsAdjacent a b ∧ cross a b = c))
+  inferInstanceAs (∀ a b c, Decidable (IsAdjacent a b ∧ c = cross a b))
 
 theorem IsAdjacent₃.isAdjacent (h : IsAdjacent₃ a b c) : IsAdjacent a b :=
   h.1
+
+theorem IsAdjacent₃.eq_cross (h : IsAdjacent₃ a b c) : c = cross a b :=
+  h.2
 
 theorem IsAdjacent.isAdjacent₃ (h : IsAdjacent a b) : IsAdjacent₃ a b (cross a b) :=
   ⟨h, rfl⟩
 
 theorem IsAdjacent₃.congr (h₁ : IsAdjacent₃ a b c₁) (h₂ : IsAdjacent₃ a b c₂) : c₁ = c₂ :=
-  h₁.2.symm.trans h₂.2
+  h₁.2.trans h₂.2.symm
 
 theorem isAdjacent₃_cyclic : IsAdjacent₃ a b c ↔ IsAdjacent₃ b c a := by
   constructor <;>
   rintro ⟨h, rfl⟩
-  · exact ⟨(h.cross_right).symm, cross_cross_right _ _⟩
-  · exact ⟨h.cross_left, cross_cross_left _ _⟩
+  · exact ⟨(h.cross_right).symm, (cross_cross_right _ _).symm⟩
+  · exact ⟨h.cross_left, (cross_cross_left _ _).symm⟩
 
 alias ⟨IsAdjacent₃.cyclic, _⟩ := isAdjacent₃_cyclic
 
@@ -410,7 +408,7 @@ theorem isAdjacent₃_rotate {a b c r : Orientation} :
     rw [cross_rotate H, rotate_inj] at hr
     exact ⟨H, hr⟩
   · rintro ⟨h, rfl⟩
-    exact ⟨h.rotate r, cross_rotate h⟩
+    exact ⟨h.rotate r, (cross_rotate h).symm⟩
 
 theorem IsAdjacent₃.rotate {a b c : Orientation} (h : IsAdjacent₃ a b c) (r : Orientation) :
     IsAdjacent₃ (a.rotate r) (b.rotate r) (c.rotate r) :=
