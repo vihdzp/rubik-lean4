@@ -1,4 +1,5 @@
 import Mathlib.GroupTheory.Perm.Sign
+import Mathlib.Data.Fintype.Units
 import Rubik.Piece
 
 open Orientation Equiv
@@ -23,7 +24,7 @@ attribute [simp] PRubik.edge_flip PRubik.corner_cyclic
 
 namespace PRubik
 
-deriving instance DecidableEq, Fintype for PRubik
+deriving instance Fintype for PRubik
 
 @[ext]
 theorem ext (cube₁ cube₂ : PRubik)
@@ -35,6 +36,9 @@ theorem ext (cube₁ cube₂ : PRubik)
   simp
   rw [Equiv.ext_iff, Equiv.ext_iff]
   exact ⟨he, hc⟩
+
+instance decEq : DecidableEq PRubik :=
+  fun _ _ ↦ decidable_of_iff _ PRubik.ext_iff.symm
 
 /-- An auxiliary function to get an edge piece in a cube, inferring the adjacency hypothesis. -/
 def edgePiece (cube : PRubik) (a b : Orientation) (h : IsAdjacent a b := by decide) : EdgePiece :=
@@ -344,18 +348,7 @@ def singleCornerRotationAux (c : CornerPiece) : PRubik where
 
 /-- Rotates a single corner **clockwise**. -/
 def singleCornerRotation (c : Corner) : PRubik :=
-  Quotient.liftOn c singleCornerRotationAux (by
-    intro c₁ c₂ h
-    obtain rfl | rfl | rfl := CornerPiece.equiv_iff.1 h
-    · rfl
-    · ext c'
-      · rfl
-      · revert c₂ c'
-        decide
-    · ext c'
-      · rfl
-      · revert c₁ c'
-        decide)
+  Quotient.liftOn c singleCornerRotationAux (by decide)
 
 /-- The **Rubik's cube invariant**. This is the combined `parity`, `edgeFlip`, and `cornerRotation`
 of a Rubik's cube.
@@ -364,9 +357,16 @@ A Rubik's cube is solvable iff it lies in the kernel of this homomorphism. -/
 def invariant : PRubik →* ℤˣ × ℤˣ × Multiplicative (ZMod 3) :=
   parity.prod <| edgeFlip.prod cornerRotation
 
-theorem invariant_surk
+/-- A constructive right inverse for the invariant. -/
+def invariant_inv : ℤˣ × ℤˣ × Multiplicative (ZMod 3) → PRubik :=
+  fun n ↦ (singleEdgeSwap (default : EdgePiece).isAdjacent) ^ ((1 - n.1.1) / 2) *
+    (singleEdgeFlip default) ^ ((1 - n.2.1.1) / 2) * (singleCornerRotation default) ^ n.2.2.1
 
-#exit
+/-- The invariant is surjective. -/
+theorem invariant_rightInverse : Function.RightInverse invariant_inv invariant := by
+  change ∀ x, _
+  decide
+
 /-- A Rubik's cube is valid when it has invariant 1. We show that this condition is equivalent to
 being solvable. -/
 def IsValid (cube : PRubik) : Prop :=

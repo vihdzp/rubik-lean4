@@ -1,6 +1,7 @@
 import Mathlib.Tactic.DeriveFintype
 import Mathlib.Data.Fintype.Perm
 import Mathlib.Data.Fintype.Prod
+import Mathlib.Data.Prod.Lex
 
 /-- A Cartesian axis in 3D space. -/
 inductive Axis : Type
@@ -148,6 +149,19 @@ theorem isNext_other_left : ∀ {a b}, IsNext a (other a b) ↔ b.IsNext a := by
 theorem isNext_other_right : ∀ {a b}, IsNext b (other a b) ↔ a.IsNext b := by
   decide
 
+/-- An arbitrary assignment of naturals for the axes, used to define the linear order instance. -/
+def toNat : Axis → ℕ
+  | Axis.x => 0
+  | Axis.y => 1
+  | Axis.z => 2
+
+theorem toNat_injective : Function.Injective toNat := by
+  decide
+
+/-- An "arbitrary" computable linear order. -/
+instance : LinearOrder Axis :=
+  LinearOrder.lift' _ toNat_injective
+
 end Axis
 
 /-- One of six possible orientations for a face of a Rubik's cube, represented as `Bool × Axis`.
@@ -169,6 +183,10 @@ namespace Orientation
 
 instance decEq : DecidableEq Orientation :=
   inferInstanceAs (DecidableEq (Bool × Axis))
+
+/-- An "arbitrary" computable linear order. -/
+instance : LinearOrder Orientation :=
+  inferInstanceAs (LinearOrder (Lex (Bool × Axis)))
 
 instance : Repr Orientation := ⟨fun e _ ↦ Std.Format.text <| match e with
   | (true, Axis.x) => "R"

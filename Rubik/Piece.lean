@@ -32,9 +32,6 @@ instance : Inhabited EdgePiece :=
 instance : Repr EdgePiece :=
   ⟨fun e ↦ [e.fst, e.snd].repr⟩
 
-protected theorem card : Fintype.card EdgePiece = 24 :=
-  rfl
-
 protected theorem ne (e : EdgePiece) : e.fst ≠ e.snd :=
   e.isAdjacent.ne
 
@@ -83,14 +80,10 @@ theorem flip_inj {e₁ e₂ : EdgePiece} : e₁.flip = e₂.flip ↔ e₁ = e₂
 def toFinset (e : EdgePiece) : Finset Orientation :=
   ⟨{e.fst, e.snd}, by simpa using e.isAdjacent.ne⟩
 
-theorem card_toFinset (e : EdgePiece) : e.toFinset.card = 2 :=
-  rfl
-
 theorem toFinset_val (e : EdgePiece) : e.toFinset.val = {e.fst, e.snd} :=
   rfl
 
-theorem mem_toFinset (e : EdgePiece) (a : Orientation) :
-    a ∈ e.toFinset ↔ a = e.fst ∨ a = e.snd := by
+theorem mem_toFinset {e : EdgePiece} : a ∈ e.toFinset ↔ a = e.fst ∨ a = e.snd := by
   rw [toFinset]
   simp
 
@@ -99,6 +92,29 @@ theorem flip_toFinset (e : EdgePiece) : e.flip.toFinset = e.toFinset := by
   rw [toFinset]
   simp_rw [Multiset.pair_comm]
   rfl
+
+/-- Returns the unique edge piece sharing a edge, with the given orientation.
+
+If the edge does not contain the orientation, we return some dummy edge piece. -/
+def withOrientation (e : EdgePiece) (a : Orientation) : EdgePiece :=
+  if e.fst = a then e else if e.snd = a then e.flip else default
+
+theorem withOrientation_fst (e : EdgePiece) (ha : a ∈ e.toFinset) :
+    (e.withOrientation a).fst = a := by
+  rw [withOrientation]
+  obtain rfl | rfl := mem_toFinset.1 ha
+  · rw [if_pos rfl]
+  · rw [if_neg e.isAdjacent.ne, if_pos rfl, flip_fst]
+
+@[simp]
+theorem withOrientation_flip (e : EdgePiece) : e.flip.withOrientation a = e.withOrientation a := by
+  rw [withOrientation, withOrientation]
+  by_cases ha : a ∈ e.toFinset
+  · have h := e.isAdjacent.ne
+    obtain rfl | rfl := mem_toFinset.1 ha <;>
+    simp [h, h.symm]
+  · rw [mem_toFinset, not_or] at ha
+    simp [Ne.symm ha.1, Ne.symm ha.2]
 
 instance : Setoid EdgePiece where
   r e₁ e₂ := e₁.toFinset = e₂.toFinset
@@ -150,8 +166,20 @@ protected abbrev mk (a b : Orientation) (h : IsAdjacent a b := by decide) : Edge
 theorem mk_flip (e : EdgePiece) : (⟦e.flip⟧ : Edge) = ⟦e⟧ :=
   Quotient.sound e.flip_equiv
 
-protected theorem card : Fintype.card Edge = 12 :=
-  rfl
+/-- Constructs the finset containing the edge's orientations. -/
+def toFinset : Edge → Finset Orientation :=
+  Quotient.lift EdgePiece.toFinset (fun _ _ ↦ id)
+
+/-- Given an edge and an orientation it contains, you can recover a unique edge piece within that
+edge with that orientation.
+
+If the edge does not contain the orientation, we return some dummy edge piece. -/
+def toEdgePiece (e : Edge) (a : Orientation) : EdgePiece :=
+  Quotient.lift (fun e ↦ EdgePiece.withOrientation e a) (by
+    intro _ _ h
+    obtain rfl | rfl := EdgePiece.equiv_iff.1 h <;>
+    simp
+  ) e
 
 end Edge
 
@@ -222,9 +250,6 @@ instance : Repr CornerPiece :=
 instance : Fintype CornerPiece :=
   Fintype.ofEquiv _ EdgeCornerEquiv
 
-protected theorem card : Fintype.card CornerPiece = 24 :=
-  rfl
-
 protected theorem ne (c : CornerPiece) : c.fst ≠ c.snd ∧ c.snd ≠ c.thd ∧ c.thd ≠ c.fst :=
   c.isAdjacent₃.ne
 
@@ -268,14 +293,10 @@ def toFinset (e : CornerPiece) : Finset Orientation :=
     obtain ⟨h₁, h₂, h₃⟩ := e.isAdjacent₃.ne
     simpa using ⟨⟨h₁, h₃.symm⟩, h₂⟩⟩
 
-theorem card_toFinset (c : CornerPiece) : c.toFinset.card = 3 :=
-  rfl
-
 theorem toFinset_val (c : CornerPiece) : c.toFinset.val = {c.fst, c.snd, c.thd} :=
   rfl
 
-theorem mem_toFinset (c : CornerPiece) (a : Orientation) :
-    a ∈ c.toFinset ↔ a = c.fst ∨ a = c.snd ∨ a = c.thd := by
+theorem mem_toFinset {c : CornerPiece} : a ∈ c.toFinset ↔ a = c.fst ∨ a = c.snd ∨ a = c.thd := by
   rw [toFinset]
   simp
 
@@ -402,11 +423,8 @@ protected abbrev mk (a b c : Orientation) (h : IsAdjacent₃ a b c := by decide)
 theorem mk_cyclic (c : CornerPiece) : (⟦c.cyclic⟧ : Corner) = ⟦c⟧ :=
   Quotient.sound c.cyclic_toFinset
 
-protected theorem card : Fintype.card Corner = 8 :=
-  rfl
-
-/-- Given a corner piece and an axis, you can recover a unique corner piece within that corner with
-that axis. -/
+/-- Given a corner and an axis, you can recover a unique corner piece within that corner with that
+axis. -/
 def toCornerPiece (c : Corner) (a : Axis) : CornerPiece :=
   Quotient.lift (fun c ↦ CornerPiece.withAxis c a) (by
     intro _ _ h
