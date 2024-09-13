@@ -1,19 +1,36 @@
 import Rubik.Orientation
 import Mathlib.Data.ZMod.Defs
 
+/-!
+Defines structures for the pieces in a Rubik's cube.
+
+A Rubik's cube is traditionally considered to have 6 center pieces, 12 edge pieces, and 8 corner
+pieces. For our mathematical formalization, it's useful to be more granular.
+
+We ignore center pieces, as they're always fixed in place, and subdivide the edges and corners into
+their individual stickers. This gives us 24 `EdgePiece`s and 24 `CornerPiece`s, which can be
+identified with `IsAdjacent` oriented pairs, and `IsAdjacent₃` oriented triples, so that
+permutations of these tuples yield the other pieces in the same edge or corner. See the docs there
+for details on this assignment.
+
+`Edge` and `Corner` are then defined as quotients of `EdgePiece` and `CornerPiece` under the
+relation of being in the same edge or corner. As expected, there are `8` `Edge`s and `12` `Corner`s.
+-/
+
 open Orientation
 
 /-- An edge piece is an ordered pair of adjacent orientations.
 
-Since we identify colors and orientations, there's two possible ways to think of this type:
+Since we identify colors and orientations, there's two possible ways to think of this structure:
 
 - The position of an edge piece within a Rubik's cube, specified by its face, followed by its
-  relative orientation with respect to it. For instance, `EdgePiece.mk U B _` is the upper piece in the upper-back edge.
+  relative orientation with respect to it. For instance, `EdgePiece.mk U B` is the upper piece in
+  the upper-back edge.
 - An edge piece with a particular color, within a particular edge. For instance,
-  `EdgePiece.mk U B _` is the white piece of the white-blue edge.
+  `EdgePiece.mk U B` is the white piece of the white-blue edge.
 
-The type `PRubik` contains an `EdgePiece ≃ EdgePiece` field, which assigns to each position in the
-cube a particular sticker color. -/
+The type `PRubik` contains a `Perm EdgePiece` field, which assigns to each edge piece position in
+the cube a particular sticker. -/
 structure EdgePiece : Type where
   /-- The first and "distinguished" orientation in the edge piece. -/
   fst : Orientation
@@ -189,13 +206,13 @@ basis.
 Since we identify colors and orientations, there's two possible ways to think of this type:
 
 - The position of a corner piece within a Rubik's cube, specified by its face, followed by its
-  relative orientation with respect to it. For instance, `EdgePiece.mk U B L _` is the upper piece
+  relative orientation with respect to it. For instance, `CornerPiece.mk U B L` is the upper piece
   in the upper-back-left corner.
 - A corner piece with a particular color, within a particular corner. For instance,
-  `EdgePiece.mk U B L _` is the white piece of the white-blue-orange edge.
+  `CornerPiece.mk U B L` is the white piece of the white-blue-orange edge.
 
-The type `PRubik` contains an `CornerPiece ≃ CornerPiece` field, which assigns to each position in
-the cube a particular sticker color. -/
+The type `PRubik` contains a `Perm CornerPiece` field, which assigns to each corner piece position
+in the cube a particular sticker. -/
 structure CornerPiece : Type where
   /-- The first and "distinguished" orientation in the corner piece. -/
   fst : Orientation

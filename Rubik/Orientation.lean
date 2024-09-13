@@ -3,6 +3,28 @@ import Mathlib.Data.Fintype.Perm
 import Mathlib.Data.Fintype.Prod
 import Mathlib.Data.Prod.Lex
 
+/-!
+Defines the geometric primitives required to construct a Rubik's cube.
+
+Rather than trying to construct a Rubik's cube as a concrete object living in `ℝ³`, we speak of each
+piece being oriented in a certain way with respect to the cartesian axes. For instance, the
+white-red edge piece in a solved cube is oriented upwards and to the right.
+
+We first define the primitive `Axis` representing the X, Y, and Z axes in 3D space. An orientation
+consists of a "sign" (`Bool`) alongside an axis, for a total of 6 orientations of a face in a cube.
+
+Since we consider the centers in a Rubik's cube to be fixed, we can readily identify each color with
+a unique orientation.
+
+Two orientations define an edge whenever they are `IsAdjacent`, i.e. their axes are distinct. Three
+orientations define a corner whenever they are `IsAdjacent₃`, i.e. pairwise adjacent. It's
+physically impossible to change the chirality of a corner, which we encode by adding the requirement
+on `IsAdjacent₃` that the orientations form a positively oriented basis.
+
+Since our types are finite and readily allow for computation, most proofs here are done with
+`by decide`.
+-/
+
 /-- A Cartesian axis in 3D space. -/
 inductive Axis : Type
   /-- The `x` or left-right axis. -/
@@ -37,35 +59,6 @@ theorem rotate_ne : ∀ a : Axis, a.rotate ≠ a := by
 @[simp]
 theorem rotate_inj : ∀ {a b : Axis}, a.rotate = b.rotate ↔ a = b := by
   decide
-
-/-- Whether `b` is the next axis in cyclic order to `a`. -/
-def IsNext (a b : Axis) : Prop :=
-  a.rotate = b
-
-instance : DecidableRel IsNext :=
-  inferInstanceAs (∀ a b : Axis, Decidable (a.rotate = b))
-
-theorem isNext_irrefl (a : Axis) : ¬ IsNext a a :=
-  rotate_ne a
-
-@[simp]
-theorem isNext_asymm_iff : ∀ {a b}, a ≠ b → (¬ IsNext a b ↔ IsNext b a) := by
-  decide
-
-theorem IsNext.asymm (h : IsNext a b) : ¬ IsNext b a := by
-  obtain rfl | hn := eq_or_ne b a
-  · exact isNext_irrefl b
-  · exact (isNext_asymm_iff hn).2 h
-
-@[simp]
-theorem isNext_rotate : ∀ {a b}, IsNext a.rotate b.rotate ↔ IsNext a b := by
-  decide
-
-theorem IsNext.congr_left (hb : IsNext a b) (hc : IsNext a c) : b = c :=
-  hb.symm.trans hc
-
-theorem IsNext.congr_right (ha : IsNext a c) (hb : IsNext b c) : a = b :=
-  rotate_inj.1 <| ha.trans hb.symm
 
 /-- Given two distinct axes, returns the third. If both axes are equal, we just return it. -/
 def other : Axis → Axis → Axis
@@ -132,22 +125,6 @@ theorem other_inj_left : ∀ {a b c}, other c a = other c b ↔ a = b := by
 @[simp]
 theorem other_inj_right : other a c = other b c ↔ a = b := by
   rw [other_comm, @other_comm b, other_inj_left]
-
-@[simp]
-theorem other_isNext_left : ∀ {a b}, (other a b).IsNext a ↔ a.IsNext b := by
-  decide
-
-@[simp]
-theorem other_isNext_right : ∀ {a b}, (other a b).IsNext b ↔ b.IsNext a := by
-  decide
-
-@[simp]
-theorem isNext_other_left : ∀ {a b}, IsNext a (other a b) ↔ b.IsNext a := by
-  decide
-
-@[simp]
-theorem isNext_other_right : ∀ {a b}, IsNext b (other a b) ↔ a.IsNext b := by
-  decide
 
 /-- An arbitrary assignment of naturals for the axes, used to define the linear order instance. -/
 def toNat : Axis → ℕ
@@ -249,7 +226,7 @@ theorem axis_mk (b : Bool) (a : Axis) : axis (b, a) = a :=
 theorem ext (h₁ : sign a = sign b) (h₂ : axis a = axis b) : a = b :=
   Prod.ext h₁ h₂
 
-/-- The negative of an orientation. -/
+/-- The opposite of an orientation, i.e. the orientation with the same axis and opposite sign. -/
 instance : Neg Orientation :=
   ⟨fun a ↦ (!a.1, a.2)⟩
 
@@ -295,11 +272,11 @@ alias ⟨IsAdjacent.symm, _⟩ := isAdjacent_comm
 /-- Given two adjacent orientations, returns the "cross product", i.e. the orientation `c` adjacent
 to both, such that `(a, b, c)` is oriented as the standard basis. -/
 def cross (a b : Orientation) : Orientation :=
-  ((a.axis.IsNext b.axis) == (a.sign == b.sign), a.axis.other b.axis)
+  ((a.axis.rotate == b.axis) == (a.sign == b.sign), a.axis.other b.axis)
 
 @[simp]
 theorem sign_cross (a b : Orientation) :
-    (cross a b).sign = ((a.axis.IsNext b.axis) == (a.sign == b.sign)) :=
+    (cross a b).sign = ((a.axis.rotate == b.axis) == (a.sign == b.sign)) :=
   rfl
 
 @[simp]

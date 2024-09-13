@@ -2,6 +2,16 @@ import Mathlib.GroupTheory.Perm.Sign
 import Mathlib.Data.Fintype.Units
 import Rubik.Piece
 
+/-!
+Defines the type of "pre-Rubik's cubes". Thes are all possible Rubik's cubes that can be assembled
+by using the 8 availble edges and 12 available corners. In particular, there is no regard for
+solvability, and "impossible" positions like a flipped edge or rotated corner are allowed.
+
+We define a group structure in `PRubik`, and define the "Rubik's cube invariant", a surjective group
+homomorphism into `ℤ₂ × ℤ₂ × ℤ₃` whose kernel will be shown to consist of precisely the solvable
+Rubik's cubes.
+-/
+
 open Orientation Equiv
 
 /-- A pre-Rubik's cube. We represent this as a permutation of the edge pieces, and a permutation of
@@ -87,7 +97,7 @@ instance : Repr PRubik := ⟨fun cube _ ↦
     ++ space ++ e[4].snd ++ B ++ e[7].snd ++ space ++ line
     ++ space ++ c[0].snd ++ e[0].snd ++ c[1].thd ++ space⟩
 
-/-- A solved Rubik's cube. -/
+/-- The solved Rubik's cube. -/
 @[simps]
 instance : One PRubik :=
   ⟨Equiv.refl _, Equiv.refl _, fun _ ↦ rfl, fun _ ↦ rfl⟩
@@ -100,7 +110,7 @@ abbrev Solved : PRubik := 1
 /-- The product of two Rubik's cubes is the Rubik's cube where the second's scramble is performed
 after the first's.
 
-Note that this is **opposite** to how multiplication is defined. -/
+Note that this is **opposite** to how function composition is usually defined. -/
 @[simps]
 instance : Mul PRubik :=
   ⟨fun cube₁ cube₂ ↦ by
@@ -199,7 +209,6 @@ def edgeEquiv : PRubik →* Perm Edge where
     refine Quotient.inductionOn e ?_
     simp
 
-@[simp]
 theorem edgeEquiv_mk (cube : PRubik) (e : EdgePiece) :
     edgeEquiv cube ⟦e⟧ = ⟦cube.edgePieceEquiv e⟧ :=
   rfl
@@ -240,7 +249,6 @@ def cornerEquiv : PRubik →* Perm Corner where
     refine Quotient.inductionOn e ?_
     simp
 
-@[simp]
 theorem cornerEquiv_mk (cube : PRubik) (c : CornerPiece) :
     cornerEquiv cube ⟦c⟧ = ⟦cube.cornerPieceEquiv c⟧ :=
   rfl
@@ -315,7 +323,7 @@ private theorem cornerRotationAux (cube₁ cube₂ : PRubik) (c : Corner) (a : A
     + (cube₂.cornerPieceEquiv (c.toCornerPiece a)).value a := by
   refine Quotient.inductionOn c ?_
   intro c
-  dsimp
+  dsimp [cornerEquiv_mk]
   conv_lhs => rw [cornerPieceEquiv_value]
   rw [add_left_inj, CornerPiece.withAxis_eq_of_equiv]
   exact cornerPieceEquiv_equiv _ (c.withAxis_equiv a)
@@ -403,5 +411,8 @@ def mk (cube : PRubik) (h : PRubik.IsValid cube := by decide) : Rubik :=
 
 instance : Repr Rubik :=
   ⟨fun cube ↦ reprPrec cube.1⟩
+
+theorem isValid (cube : Rubik) : cube.1.IsValid :=
+  cube.2
 
 end Rubik
