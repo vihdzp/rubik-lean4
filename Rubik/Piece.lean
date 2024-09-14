@@ -1,5 +1,6 @@
 import Rubik.Orientation
 import Mathlib.Data.ZMod.Defs
+import Mathlib.Data.Finset.Sort
 
 /-!
 Defines structures for the pieces in a Rubik's cube.
@@ -186,6 +187,9 @@ theorem mk_flip (e : EdgePiece) : (⟦e.flip⟧ : Edge) = ⟦e⟧ :=
 /-- Constructs the finset containing the edge's orientations. -/
 def toFinset : Edge → Finset Orientation :=
   Quotient.lift EdgePiece.toFinset (fun _ _ ↦ id)
+
+unsafe instance : Repr Edge :=
+  ⟨fun e _ ↦ repr e.toFinset⟩
 
 /-- Given an edge and an orientation it contains, you can recover a unique edge piece within that
 edge with that orientation.
@@ -439,6 +443,13 @@ protected abbrev mk (a b c : Orientation) (h : IsAdjacent₃ a b c := by decide)
 @[simp]
 theorem mk_cyclic (c : CornerPiece) : (⟦c.cyclic⟧ : Corner) = ⟦c⟧ :=
   Quotient.sound c.cyclic_toFinset
+
+/-- Constructs the finset containing the edge's orientations. -/
+def toFinset : Corner → Finset Orientation :=
+  Quotient.lift CornerPiece.toFinset (fun _ _ ↦ id)
+
+unsafe instance : Repr Corner :=
+  ⟨fun c _ ↦ repr c.toFinset⟩
 
 /-- Given a corner and an axis, you can recover a unique corner piece within that corner with that
 axis. -/

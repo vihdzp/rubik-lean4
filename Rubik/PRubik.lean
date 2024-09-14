@@ -260,7 +260,7 @@ def parity : PRubik →* ℤˣ :=
   (Perm.sign.comp edgeEquiv) * (Perm.sign.comp cornerEquiv)
 
 /-- The Rubik's cube with a single edge swapped with its counterclockwise edge in the same face. -/
-def singleEdgeSwap (h : IsAdjacent a b) : PRubik where
+def swapEdges (h : IsAdjacent a b) : PRubik where
   edgePieceEquiv := (swap ⟨a, b, h⟩ ⟨a, cross a b, h.cross_left.symm⟩).trans
     (swap ⟨b, a, h.symm⟩ ⟨cross a b, a, h.cross_left⟩)
   cornerPieceEquiv := Equiv.refl _
@@ -277,7 +277,7 @@ def edgeFlip : PRubik →* ℤˣ :=
   Perm.sign.comp edgePieceEquivHom
 
 /-- Flips a single edge. -/
-private def singleEdgeFlipAux (e : EdgePiece) : PRubik where
+private def flipEdgeAux (e : EdgePiece) : PRubik where
   edgePieceEquiv := swap e e.flip
   cornerPieceEquiv := Equiv.refl _
   edge_flip e' := by
@@ -290,15 +290,26 @@ private def singleEdgeFlipAux (e : EdgePiece) : PRubik where
   corner_cyclic _ := rfl
 
 /-- Flips a single edge. -/
-def singleEdgeFlip (e : Edge) : PRubik :=
-  Quotient.liftOn e singleEdgeFlipAux (by
+def flipEdge (e : Edge) : PRubik :=
+  Quotient.liftOn e flipEdgeAux (by
     intro e₁ e₂ h
     obtain rfl | rfl := EdgePiece.equiv_iff.1 h
     · rfl
     · ext
-      · dsimp [singleEdgeFlipAux]
+      · dsimp [flipEdgeAux]
         rw [swap_comm]
       · rfl)
+
+@[simp]
+theorem edgePieceEquiv_flipEdge (e : EdgePiece) :
+    edgePieceEquiv (flipEdge ⟦e⟧) = swap e e.flip :=
+  rfl
+
+@[simp]
+theorem cornerPieceEquiv_flipEdge (e : Edge) : cornerPieceEquiv (flipEdge e) = Equiv.refl _ := by
+  refine Quotient.inductionOn e ?_
+  intros
+  rfl
 
 theorem cornerPieceEquiv_value (cube : PRubik) (c : CornerPiece) (a : Axis) :
     (cube.cornerPieceEquiv c).value a =
@@ -346,7 +357,7 @@ def cornerRotation : PRubik →* Multiplicative (ZMod 3) where
     simp
 
 /-- Rotates a single corner **clockwise**. -/
-def singleCornerRotationAux (c : CornerPiece) : PRubik where
+def rotateCornerAux (c : CornerPiece) : PRubik where
   edgePieceEquiv := Equiv.refl _
   cornerPieceEquiv := (swap c c.cyclic).trans (swap c c.cyclic.cyclic)
   edge_flip _ := rfl
@@ -355,8 +366,8 @@ def singleCornerRotationAux (c : CornerPiece) : PRubik where
     decide
 
 /-- Rotates a single corner **clockwise**. -/
-def singleCornerRotation (c : Corner) : PRubik :=
-  Quotient.liftOn c singleCornerRotationAux (by decide)
+def rotateCorner (c : Corner) : PRubik :=
+  Quotient.liftOn c rotateCornerAux (by decide)
 
 /-- The **Rubik's cube invariant**. This is the combined `parity`, `edgeFlip`, and `cornerRotation`
 of a Rubik's cube.
@@ -367,8 +378,8 @@ def invariant : PRubik →* ℤˣ × ℤˣ × Multiplicative (ZMod 3) :=
 
 /-- A constructive right inverse for the invariant. -/
 def invariant_inv : ℤˣ × ℤˣ × Multiplicative (ZMod 3) → PRubik :=
-  fun n ↦ (singleEdgeSwap (default : EdgePiece).isAdjacent) ^ ((1 - n.1.1) / 2) *
-    (singleEdgeFlip default) ^ ((1 - n.2.1.1) / 2) * (singleCornerRotation default) ^ n.2.2.1
+  fun n ↦ (swapEdges (default : EdgePiece).isAdjacent) ^ ((1 - n.1.1) / 2) *
+    (flipEdge default) ^ ((1 - n.2.1.1) / 2) * (rotateCorner default) ^ n.2.2.1
 
 /-- The invariant is surjective. -/
 theorem invariant_rightInverse : Function.RightInverse invariant_inv invariant := by
