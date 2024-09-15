@@ -146,19 +146,28 @@ theorem fixCorners₃_move₃ (c₁ c₂ c₃ : Corner) :
     cornerEquiv (move (fixCorners₃ c₁ c₂ c₃)) (Corner.mk U L F) = c₃ := by
   simp [fixCorners₃]
 
-/-
-/-- Flips two distinct edges in a Rubik's cube. -/
-def flipEdges (e₁ e₂ : Edge) : PRubik :=
-  flipEdge e₁ * flipEdge e₂
+/-- A sequence of moves that swaps `Edge.mk U B` and `Edge.mk U L`. All other edges are fixed, but
+some corners are moved. -/
+private def swapEdgesAux : Moves :=
+  [F, U, F, F, F, U, F, U, U, F, F, F, U]
 
+set_option maxRecDepth 750 in
+private theorem edgeEquiv_swapEdgesAux :
+    edgeEquiv (move swapEdgesAux) = Equiv.swap (Edge.mk U B) (Edge.mk U L) := by
+  decide
 
-theorem flipEdges_comm (e₁ e₂ : Edge) : flipEdges e₁ e₂ = flipEdges e₂ e₁ := by
+/-- A sequence of moves that swaps two edges. All other edges are fixed, but some corners are
+moved. -/
+def swapEdges (e₁ e₂ : Edge) : Moves :=
+  let m := fixEdges e₁ e₂
+  m.symm ++ swapEdgesAux ++ m
+
+theorem edgeEquiv_swapEdges (h : e₁ ≠ e₂) :
+    edgeEquiv (move (swapEdges e₁ e₂)) = Equiv.swap e₁ e₂ := by
+  simp [swapEdges, edgeEquiv_swapEdgesAux]
   ext e
-  · refine Quotient.inductionOn₂ e₁ e₂ ?_
-    intro e₁ e₂
-    simp [flipEdges]
-
-  · simp [flipEdges]
--/
+  obtain rfl | h := eq_or_ne e (Edge.mk U B)
+  · simp
+    rw [fixEdges_]
 
 end Moves

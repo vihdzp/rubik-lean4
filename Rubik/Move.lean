@@ -1,4 +1,35 @@
+import Mathlib.Tactic.FinCases
 import Rubik.PRubik
+
+section replicate
+open List
+variable {α : Type*} [Inhabited α]
+
+theorem replicate_cases (m : List α) : (∃ a n, m = replicate n a) ∨
+    ∃ (a b : α) (n : ℕ+) (l : List α), a ≠ b ∧ m = replicate n a ++ (b :: l) := by
+  cases m with
+  | nil => exact Or.inl ⟨default, 0, rfl⟩
+  | cons a m =>
+      obtain ⟨b, n, rfl⟩ | ⟨b, c, n, l, h, rfl⟩ := replicate_cases m <;>
+      obtain rfl | h' := eq_or_ne a b
+      · exact Or.inl ⟨a, n + 1, rfl⟩
+      · cases n with
+        | zero => exact Or.inl ⟨a, 1, rfl⟩
+        | succ n => exact Or.inr ⟨a, b, 1, replicate n b, h', rfl⟩
+      · exact Or.inr ⟨a, c, n + 1, l, h, rfl⟩
+      · refine Or.inr ⟨a, b, 1, (replicate n.natPred b ++ c :: l), h', ?_⟩
+        simp [← cons_append]
+        rw [← PNat.natPred_add_one]
+        rfl
+
+theorem replicateRecOn {p : List α → Prop} (m : List α) (hr : ∀ a n, p (replicate n a))
+    (hi : ∀ a b n l, a ≠ b → p (b :: l) → p (replicate n a ++ b :: l)) : p m := by
+  obtain ⟨a, n, rfl⟩ | ⟨a, b, n, l, h, rfl⟩ := replicate_cases m
+  · exact hr a n
+  · exact hi a b n _ h (replicateRecOn _ hr hi)
+termination_by m.length
+
+end replicate
 
 namespace PRubik
 
@@ -187,30 +218,6 @@ theorem deduplicateCore_cons₄ (a : Orientation) (m : Moves) :
   rw [deduplicateCore]
   simp_rw [if_neg (not_not.2 rfl)]
 
-theorem replicate_cases (m : Moves) : (∃ a n, m = replicate n a) ∨
-    ∃ (a b : Orientation) (n : ℕ+) (l : Moves), a ≠ b ∧ m = replicate n a ++ (b :: l) := by
-  cases m with
-  | nil => exact Or.inl ⟨default, 0, rfl⟩
-  | cons a m =>
-      obtain ⟨b, n, rfl⟩ | ⟨b, c, n, l, h, rfl⟩ := replicate_cases m <;>
-      obtain rfl | h' := eq_or_ne a b
-      · exact Or.inl ⟨a, n + 1, rfl⟩
-      · cases n with
-        | zero => exact Or.inl ⟨a, 1, rfl⟩
-        | succ n => exact Or.inr ⟨a, b, 1, replicate n b, h', rfl⟩
-      · exact Or.inr ⟨a, c, n + 1, l, h, rfl⟩
-      · refine Or.inr ⟨a, b, 1, (replicate n.natPred b ++ c :: l), h', ?_⟩
-        simp [← cons_append]
-        rw [← PNat.natPred_add_one]
-        rfl
-
-theorem replicateRecOn {p : Moves → Prop} (m : Moves) (hr : ∀ a n, p (replicate n a))
-    (hi : ∀ a b n l, a ≠ b → p (b :: l) → p (replicate n a ++ b :: l)) : p m := by
-  obtain ⟨a, n, rfl⟩ | ⟨a, b, n, l, h, rfl⟩ := replicate_cases m
-  · exact hr a n
-  · exact hi a b n _ h (replicateRecOn _ hr hi)
-termination_by m.length
-
 @[simp]
 theorem deduplicateCore_replicate (n : ℕ) : deduplicateCore (replicate n a) = replicate (n % 4) a :=
   match n with
@@ -342,6 +349,15 @@ theorem deduplicate_cons₄ (a : Orientation) (m : Moves) :
   rw [← deduplicate_deduplicateCore, deduplicateCore_cons₄, deduplicate_deduplicateCore]
 
 @[simp]
+theorem deduplicate_replicate (n : ℕ) : deduplicate (replicate n a) = replicate (n % 4) a := by
+  rw [← deduplicate_deduplicateCore, deduplicateCore_replicate, deduplicate_of_eq]
+  have : n % 4 < 4 := Nat.mod_lt n (Nat.succ_pos 3)
+  simp [Nat.lt_succ_iff, le_iff_lt_or_eq] at this
+  generalize n % 4 = m at *
+  obtain ((rfl | rfl) | rfl) | rfl := this <;>
+  rfl
+
+@[simp]
 theorem deduplicate_symm_symm (m : Moves) : deduplicate m.symm.symm = deduplicate m := by
   rw [← deduplicate_deduplicateCore, deduplicateCore_symm_symm, deduplicate_deduplicateCore]
 
@@ -384,6 +400,31 @@ theorem move_symm (m : Moves) : move m.symm = (move m)⁻¹ := by
   induction m with
   | nil => simp
   | cons r m IH => simp [IH, ofOrientation_inv, pow_succ, mul_assoc]
+
+@[simp]
+theorem move_deduplicateCore (m : Moves) : move m.deduplicateCore = move m :=
+  match m with
+  | [] => rfl
+  | [a] => rfl
+  | [a, b] => rfl
+  | [a, b, c] => rfl
+  | a :: b :: c :: d :: m => by
+      rw [Moves.deduplicateCore]
+      split_ifs with h₁ h₂ h₃
+      all_goals try simp [move_deduplicateCore]
+      rw [not_not] at h₁ h₂ h₃
+      subst h₁ h₂ h₃
+      simp [← mul_assoc]
+      exact ofOrientation₄ a
+
+@[simp]
+theorem move_deduplicate (m : Moves) : move m.deduplicate = move m := by
+  obtain ⟨n, hn⟩ := Moves.deduplicate_eq_iterate m
+  rw [hn]
+  clear hn
+  induction n with
+  | zero => rfl
+  | succ n IH => rw [Function.iterate_succ_apply', move_deduplicateCore, IH]
 
 /-- A Rubik's cube is solvable when there exists a sequence of moves that can assemble it from the
 solved state.
