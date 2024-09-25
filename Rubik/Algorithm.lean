@@ -2,9 +2,24 @@ import Rubik.Move
 
 open Orientation PRubik
 
+
+namespace Equiv
+
 @[simp]
-theorem Equiv.symm_mul {α : Type*} (e₁ e₂ : Equiv.Perm α) : (e₁ * e₂).symm = e₂.symm * e₁.symm :=
+theorem symm_mul {α : Type*} (e₁ e₂ : Equiv.Perm α) : (e₁ * e₂).symm = e₂.symm * e₁.symm :=
   rfl
+
+@[simp]
+theorem swap_conj {α : Type*} [DecidableEq α] (e : Equiv.Perm α) (x y : α) :
+    e * (Equiv.swap x y) * e⁻¹ = Equiv.swap (e x) (e y) := by
+  aesop (add norm Equiv.swap_apply_def)
+
+@[simp]
+theorem swap_conj' {α : Type*} [DecidableEq α] (e : Equiv.Perm α) (x y : α) :
+    e⁻¹ * (Equiv.swap x y) * e = Equiv.swap (e⁻¹ x) (e⁻¹ y) :=
+  swap_conj e⁻¹ x y
+
+end Equiv
 
 namespace Moves
 
@@ -98,15 +113,11 @@ theorem fixCorner_fix₁ : ∀ {c : Corner}, c ≠ Corner.mk U R B →
 theorem fixCorner_fix₂ : ∀ {c : Corner}, c ≠ Corner.mk U B L →
     cornerEquiv (move (fixCorner c)) (Corner.mk U B L) = Corner.mk U B L := by
   decide
---`Corner.mk U R B`
+
 /-- A sequence of moves sending `c₁` to `Corner.mk U B L` and `c₂` to `Corner.mk U L F`. -/
 def fixCorners₂ (c₁ c₂ : Corner) : Moves :=
   let m := fixCorner c₁ ++ Moves.U
   m ++ fixCorner ((cornerEquiv (move m)).symm c₂)
-  /-let m := fixCorner c₁ ++ Moves.U
-  let n := fixCorner ((cornerEquiv (move m)).symm c₂) ++ Moves.U
-  let p := m ++ n
-  p ++ fixCorner ((cornerEquiv (move p)).symm c₃)-/
 
 private theorem cornerEquiv_UBL :
     (cornerEquiv (ofOrientation U)) (Corner.mk U B L) = Corner.mk U L F := by
@@ -142,6 +153,7 @@ theorem fixCorners₃_move₂ (c₁ : Corner) (h : c₂ ≠ c₃) :
   rw [fixCorner_fix₂, cornerEquiv_UBL, fixCorners₂_move₂]
   rwa [ne_eq, Equiv.symm_apply_eq, cornerEquiv_UBL, Equiv.symm_apply_eq, fixCorners₂_move₂, eq_comm]
 
+@[simp]
 theorem fixCorners₃_move₃ (c₁ c₂ c₃ : Corner) :
     cornerEquiv (move (fixCorners₃ c₁ c₂ c₃)) (Corner.mk U L F) = c₃ := by
   simp [fixCorners₃]
@@ -160,14 +172,11 @@ private theorem edgeEquiv_swapEdgesAux :
 moved. -/
 def swapEdges (e₁ e₂ : Edge) : Moves :=
   let m := fixEdges e₁ e₂
-  m.symm ++ swapEdgesAux ++ m
+  m ++ swapEdgesAux ++ m.symm
 
 theorem edgeEquiv_swapEdges (h : e₁ ≠ e₂) :
     edgeEquiv (move (swapEdges e₁ e₂)) = Equiv.swap e₁ e₂ := by
-  simp [swapEdges, edgeEquiv_swapEdgesAux]
-  ext e
-  obtain rfl | h := eq_or_ne e (Edge.mk U B)
-  · simp
-    rw [fixEdges_]
+  simp [swapEdges, edgeEquiv_swapEdgesAux, ← mul_assoc]
+  rw [fixEdges_move₁ h]
 
 end Moves
