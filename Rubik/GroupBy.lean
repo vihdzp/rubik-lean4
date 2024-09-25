@@ -18,6 +18,8 @@ This file provides the basic API for `List.groupBy`. The main results are the fo
   to the first element of the next list.
 -/
 
+-- https://github.com/leanprover-community/mathlib4/pull/16837
+
 namespace List
 
 variable {α : Type*} {m : List α}

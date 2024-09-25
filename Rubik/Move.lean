@@ -1,35 +1,6 @@
 import Mathlib.Tactic.FinCases
 import Rubik.PRubik
-
-section replicate
-open List
-variable {α : Type*} [Inhabited α]
-
-theorem replicate_cases (m : List α) : (∃ a n, m = replicate n a) ∨
-    ∃ (a b : α) (n : ℕ+) (l : List α), a ≠ b ∧ m = replicate n a ++ (b :: l) := by
-  cases m with
-  | nil => exact Or.inl ⟨default, 0, rfl⟩
-  | cons a m =>
-      obtain ⟨b, n, rfl⟩ | ⟨b, c, n, l, h, rfl⟩ := replicate_cases m <;>
-      obtain rfl | h' := eq_or_ne a b
-      · exact Or.inl ⟨a, n + 1, rfl⟩
-      · cases n with
-        | zero => exact Or.inl ⟨a, 1, rfl⟩
-        | succ n => exact Or.inr ⟨a, b, 1, replicate n b, h', rfl⟩
-      · exact Or.inr ⟨a, c, n + 1, l, h, rfl⟩
-      · refine Or.inr ⟨a, b, 1, (replicate n.natPred b ++ c :: l), h', ?_⟩
-        simp [← cons_append]
-        rw [← PNat.natPred_add_one]
-        rfl
-
-theorem replicateRecOn {p : List α → Prop} (m : List α) (hr : ∀ a n, p (replicate n a))
-    (hi : ∀ a b n l, a ≠ b → p (b :: l) → p (replicate n a ++ b :: l)) : p m := by
-  obtain ⟨a, n, rfl⟩ | ⟨a, b, n, l, h, rfl⟩ := replicate_cases m
-  · exact hr a n
-  · exact hi a b n _ h (replicateRecOn _ hr hi)
-termination_by m.length
-
-end replicate
+import Rubik.RunLength
 
 namespace PRubik
 
@@ -74,14 +45,14 @@ theorem ofOrientation_inj : ∀ {r₁ r₂}, ofOrientation r₁ = ofOrientation 
   decide
 
 @[simp]
-theorem ofOrientation₄ (r : Orientation) : (ofOrientation r) ^ 4 = 1 := by
+theorem ofOrientation₄ (r : Orientation) : ofOrientation r ^ 4 = 1 := by
   simp_rw [ofOrientation, pow_succ, mul_assoc]
   convert mul_one _
   ext e
   · exact congr_fun (rotate_edgePiece₄ r) e
   · exact congr_fun (rotate_cornerPiece₄ r) e
 
-theorem ofOrientation_inv (r : Orientation) : (ofOrientation r)⁻¹ = (ofOrientation r) ^ 3 := by
+theorem ofOrientation_inv (r : Orientation) : (ofOrientation r)⁻¹ = ofOrientation r ^ 3 := by
   rw [inv_eq_iff_mul_eq_one, ← pow_succ', ofOrientation₄]
 
 @[simp]
@@ -174,117 +145,74 @@ theorem symm_replicate (n : ℕ) (a : Orientation) : symm (replicate n a) = repl
   induction n with
   | zero => rfl
   | succ n IH =>
-      rw [replicate_succ, symm_cons, IH, mul_add, replicate_add]
-      rfl
+    rw [replicate_succ, symm_cons, IH, mul_add, replicate_add]
+    rfl
+
+theorem Option.or_some_right (a : Option α) (b : α) : a.or (some b) = a.getD b := by
+  cases a <;> rfl
+
+@[simp]
+theorem head?_symm (m : Moves) : head? m.symm = getLast? m := by
+  induction m with
+  | nil => rfl
+  | cons a m IH =>
+    rw [symm_cons, head?_append, head?_cons, getLast?_cons, IH, Option.or_some_right]
+
+@[simp]
+theorem getLast?_symm (m : Moves) : getLast? m.symm = head? m := by
+  cases m with
+  | nil => rfl
+  | cons a m =>
+    rw [symm_cons, getLast?_append, getLast?_cons_cons, getLast?_cons_cons, getLast?_singleton,
+      Option.or_some, head?_cons]
 
 /-- Removes any instances of four consecutive rotations from a list of moves.
 
 Note that this might still contain four consecutive rotations, e.g.
 `deduplicateCore [L, L, F, F, F, F, L, L] = [L, L, L, L]`. -/
-def deduplicateCore : Moves → Moves
-  | [] => []
-  | [a] => [a]
-  | [a, b] => [a, b]
-  | [a, b, c] => [a, b, c]
-  | a :: b :: c :: d :: m =>
-      if a ≠ b then a :: deduplicateCore (b :: c :: d :: m) else
-      if b ≠ c then a :: b :: deduplicateCore (c :: d :: m) else
-      if c ≠ d then a :: b :: c :: deduplicateCore (d :: m) else deduplicateCore m
+def deduplicateCore (m : Moves) : Moves :=
+  runLengthRecOn m [] fun n a _ _ IH ↦ replicate (n % 4) a ++ IH
 
 @[simp]
 theorem deduplicateCore_nil : deduplicateCore [] = [] :=
   rfl
 
-theorem deduplicateCore_cons (h : a ≠ b) (m : Moves) :
-    deduplicateCore (a :: b :: m) = a :: deduplicateCore (b :: m) :=
-  match m with
-  | [] => rfl
-  | [c] => rfl
-  | c :: d :: m => by rw [deduplicateCore, if_pos h]
-
-theorem deduplicateCore_cons₂ (h : a ≠ b) (m : Moves) :
-    deduplicateCore (a :: a :: b :: m) = a :: a :: deduplicateCore (b :: m) :=
-  match m with
-  | [] => rfl
-  | c :: m => by rw [deduplicateCore, if_neg (not_not.2 rfl), if_pos h]
-
-theorem deduplicateCore_cons₃ (h : a ≠ b) (m : Moves) :
-    deduplicateCore (a :: a :: a :: b :: m) = a :: a :: a :: deduplicateCore (b :: m) := by
-  rw [deduplicateCore, if_neg (not_not.2 rfl), if_neg (not_not.2 rfl), if_pos h]
+theorem deduplicateCore_append (n : ℕ) {a : Orientation} {m : Moves} (hm : a ∉ m.head?) :
+    deduplicateCore (replicate n a ++ m) = replicate (n % 4) a ++ deduplicateCore m := by
+  obtain rfl | hn := n.eq_zero_or_pos
+  · rfl
+  · exact runLengthRecOn_append hn hm _ _
 
 @[simp]
-theorem deduplicateCore_cons₄ (a : Orientation) (m : Moves) :
-    deduplicateCore (a :: a :: a :: a :: m) = deduplicateCore m := by
-  rw [deduplicateCore]
-  simp_rw [if_neg (not_not.2 rfl)]
-
-@[simp]
-theorem deduplicateCore_replicate (n : ℕ) : deduplicateCore (replicate n a) = replicate (n % 4) a :=
-  match n with
-  | 0 => rfl
-  | 1 => rfl
-  | 2 => rfl
-  | 3 => rfl
-  | n + 4 => by
-      rw [add_comm, replicate_add, Nat.add_mod_left]
-      change deduplicateCore (a :: a :: a :: a :: (replicate n a)) = _
-      rw [deduplicateCore_cons₄, deduplicateCore_replicate]
-
-theorem deduplicateCore_replicate_append (h : a ≠ b) (n : ℕ) (m : Moves) :
-    deduplicateCore (replicate n a ++ b :: m) =
-    replicate (n % 4) a ++ deduplicateCore (b :: m) :=
-  match n with
-  | 0 => rfl
-  | 1 => by simp [deduplicateCore_cons h]
-  | 2 => by simp [deduplicateCore_cons₂ h]
-  | 3 => by simp [deduplicateCore_cons₃ h]
-  | n + 4 => by
-      rw [add_comm, replicate_add, Nat.add_mod_left]
-      change deduplicateCore (a :: a :: a :: a :: (replicate n a ++ b :: m)) = _
-      rw [deduplicateCore_cons₄, deduplicateCore_replicate_append h]
+theorem deduplicateCore_replicate (n : ℕ) (a : Orientation) :
+    deduplicateCore (replicate n a) = replicate (n % 4) a := by
+  convert deduplicateCore_append n (m := []) (Option.not_mem_none a) <;> simp
 
 @[simp]
 theorem deduplicateCore_symm_symm (m : Moves) :
     deduplicateCore m.symm.symm = deduplicateCore m := by
-  apply replicateRecOn m
-  · simp [← mul_assoc, Nat.mul_mod]
-  · intro a b n l h
-    simp [deduplicateCore_replicate_append h, ← mul_assoc, Nat.mul_mod]
+  apply runLengthRecOn m
+  · rfl
+  · intro n a l ha IH
+    have : 3 * 3 % 4 = 1 := rfl
+    rw [symm_append, symm_append, deduplicateCore_append n ha, symm_replicate, symm_replicate,
+      deduplicateCore_append, IH, append_cancel_right_eq, ← mul_assoc, ← Nat.mod_mul_mod,
+      this, one_mul]
+    rwa [head?_symm, getLast?_symm]
 
 theorem deduplicateCore_eq_or_length_lt (m : Moves) :
-    deduplicateCore m = m ∨ (deduplicateCore m).length < m.length :=
-  match m with
-  | [] => Or.inl rfl
-  | [a] => Or.inl rfl
-  | [a, b] => Or.inl rfl
-  | [a, b, c] => Or.inl rfl
-  | a :: b :: c :: d :: m => by
-      rw [deduplicateCore]
-      split_ifs with h₁ h₂ h₃
-      · obtain h | h := deduplicateCore_eq_or_length_lt (b :: c :: d :: m)
-        · rw [h]
-          exact Or.inl rfl
-        · simp_rw [length_cons, add_lt_add_iff_right]
-          exact Or.inr h
-      · obtain h | h := deduplicateCore_eq_or_length_lt (c :: d :: m)
-        · rw [h]
-          exact Or.inl rfl
-        · simp_rw [length_cons, add_lt_add_iff_right]
-          exact Or.inr h
-      · obtain h | h := deduplicateCore_eq_or_length_lt (d :: m)
-        · rw [h]
-          exact Or.inl rfl
-        · simp_rw [length_cons, add_lt_add_iff_right]
-          exact Or.inr h
-      · rw [not_not] at h₁ h₂ h₃
-        subst h₁ h₂ h₃
-        right
-        obtain h | h := deduplicateCore_eq_or_length_lt m
-        · rw [h]
-          simp_rw [length_cons, add_assoc]
-          exact lt_add_of_pos_right _ (Nat.zero_lt_succ 3)
-        · apply h.trans_le
-          simp [add_assoc]
+    deduplicateCore m = m ∨ (deduplicateCore m).length < m.length := by
+  apply runLengthRecOn m
+  · exact Or.inl rfl
+  · intro n a l ha IH
+    rw [deduplicateCore_append n ha, length_append, length_append,
+      length_replicate, length_replicate]
+    obtain hn | hn := (Nat.mod_le n 4).lt_or_eq
+    · apply Or.inr (add_lt_add_of_lt_of_le hn _)
+      obtain hl | hl := IH
+      · rw [hl]
+      · exact hl.le
+    · rwa [hn, append_cancel_left_eq, add_lt_add_iff_left]
 
 theorem deduplicateCore_length_le (m : Moves) : (deduplicateCore m).length ≤ m.length := by
   obtain h | h := deduplicateCore_eq_or_length_lt m
@@ -344,18 +272,9 @@ theorem deduplicate_deduplicate (m : Moves) : deduplicate (deduplicate m) = dedu
   deduplicate_of_eq (deduplicateCore_deduplicate m)
 
 @[simp]
-theorem deduplicate_cons₄ (a : Orientation) (m : Moves) :
-    deduplicate (a :: a :: a :: a :: m) = deduplicate m := by
-  rw [← deduplicate_deduplicateCore, deduplicateCore_cons₄, deduplicate_deduplicateCore]
-
-@[simp]
 theorem deduplicate_replicate (n : ℕ) : deduplicate (replicate n a) = replicate (n % 4) a := by
   rw [← deduplicate_deduplicateCore, deduplicateCore_replicate, deduplicate_of_eq]
-  have : n % 4 < 4 := Nat.mod_lt n (Nat.succ_pos 3)
-  simp [Nat.lt_succ_iff, le_iff_lt_or_eq] at this
-  generalize n % 4 = m at *
-  obtain ((rfl | rfl) | rfl) | rfl := this <;>
-  rfl
+  rw [deduplicateCore_replicate, Nat.mod_mod]
 
 @[simp]
 theorem deduplicate_symm_symm (m : Moves) : deduplicate m.symm.symm = deduplicate m := by
@@ -401,21 +320,24 @@ theorem move_symm (m : Moves) : move m.symm = (move m)⁻¹ := by
   | nil => simp
   | cons r m IH => simp [IH, ofOrientation_inv, pow_succ, mul_assoc]
 
+theorem move_replicate (n : ℕ) (a : Orientation) :
+    move (List.replicate n a) = move (List.replicate (n % 4) a) :=
+  match n with
+  | 0 => rfl
+  | 1 => rfl
+  | 2 => rfl
+  | 3 => rfl
+  | n + 4 => by
+    rw [List.replicate_add, move_append, Nat.add_mod_right, move_replicate, mul_right_eq_self]
+    exact ofOrientation₄ a
+
 @[simp]
-theorem move_deduplicateCore (m : Moves) : move m.deduplicateCore = move m :=
-  match m with
-  | [] => rfl
-  | [a] => rfl
-  | [a, b] => rfl
-  | [a, b, c] => rfl
-  | a :: b :: c :: d :: m => by
-      rw [Moves.deduplicateCore]
-      split_ifs with h₁ h₂ h₃
-      all_goals try simp [move_deduplicateCore]
-      rw [not_not] at h₁ h₂ h₃
-      subst h₁ h₂ h₃
-      simp [← mul_assoc]
-      exact ofOrientation₄ a
+theorem move_deduplicateCore (m : Moves) : move m.deduplicateCore = move m := by
+  apply List.runLengthRecOn m
+  · rfl
+  · intro n a l ha IH
+    rw [Moves.deduplicateCore_append n ha, move_append, move_append, IH]
+    conv_rhs => rw [move_replicate]
 
 @[simp]
 theorem move_deduplicate (m : Moves) : move m.deduplicate = move m := by

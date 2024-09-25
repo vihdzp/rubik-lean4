@@ -3,9 +3,12 @@ Copyright (c) 2024 Violeta Hernández Palacios. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Violeta Hernández Palacios
 -/
-import Rubik.GroupBy
 import Mathlib.Data.PNat.Defs
 import Mathlib.Order.TypeTags
+import Rubik.Chain
+import Rubik.GroupBy
+
+-- https://github.com/leanprover-community/mathlib4/pull/17105
 
 /-!
 # Run-length encoding
@@ -147,13 +150,14 @@ theorem runLengthRecOn_nil {p : List α → Sort*} (hn : p [])
     runLengthRecOn [] hn hi = hn :=
   rfl
 
-theorem runLengthRecOn_append {p : List α → Sort*} (n : ℕ+) (a : α) {l : List α} (hl : a ∉ l.head?)
-    (hn : p []) (hi : ∀ (n : ℕ+) {a l}, a ∉ l.head? → p l → p (replicate n a ++ l)) :
-    runLengthRecOn (replicate n a ++ l) hn hi = hi n hl (runLengthRecOn l hn hi) := by
+theorem runLengthRecOn_append {p : List α → Sort*} {n : ℕ} (h : 0 < n) {a : α} {l : List α}
+    (hl : a ∉ l.head?) (hn : p [])
+    (hi : ∀ (n : ℕ+) {a l}, a ∉ l.head? → p l → p (replicate n a ++ l)) :
+    runLengthRecOn (replicate n a ++ l) hn hi = hi ⟨n, h⟩ hl (runLengthRecOn l hn hi) := by
   rw [runLengthRecOn, runLengthRecOn, cast_eq_iff_heq]
-  have := runLength_append n.2 hl
+  have := runLength_append h hl
   have H : HEq (List.runLengthRecOnAux (replicate n a ++ l).RunLength
-      (chain'_runLength _) hn hi) (List.runLengthRecOnAux ((n, a)::l.RunLength)
+      (chain'_runLength _) hn hi) (List.runLengthRecOnAux ((⟨n, h⟩, a)::l.RunLength)
       (this ▸ chain'_runLength _) hn hi) := by
     congr
     exact proof_irrel_heq _ _
