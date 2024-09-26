@@ -1,4 +1,5 @@
 import Rubik.Orientation
+import Mathlib.Combinatorics.Colex
 import Mathlib.Data.ZMod.Defs
 import Mathlib.Data.Finset.Sort
 
@@ -65,6 +66,10 @@ theorem ext_iff {e₁ e₂ : EdgePiece} : e₁ = e₂ ↔ e₁.fst = e₂.fst �
     exact ⟨rfl, rfl⟩
   · rintro ⟨hf, hs⟩
     exact ext hf hs
+
+/-- An "arbitrary" computable linear order. -/
+instance : LinearOrder EdgePiece :=
+  LinearOrder.lift' (fun e ↦ [e.fst, e.snd]) (fun _ _ ↦ by simp [ext_iff])
 
 /-- Builds an `EdgePiece`, automatically inferring the adjacency condition. -/
 protected abbrev mk' (a b : Orientation) (h : IsAdjacent a b := by decide) : EdgePiece :=
@@ -188,19 +193,51 @@ theorem mk_flip (e : EdgePiece) : (⟦e.flip⟧ : Edge) = ⟦e⟧ :=
 def toFinset : Edge → Finset Orientation :=
   Quotient.lift EdgePiece.toFinset (fun _ _ ↦ id)
 
+@[simp]
+theorem toFinset_mk (e : EdgePiece) : toFinset ⟦e⟧ = e.toFinset :=
+  rfl
+
+theorem toFinset_injective : Function.Injective toFinset := by
+  intro e₁ e₂
+  refine Quotient.inductionOn₂ e₁ e₂ ?_
+  intro e₁ e₂ h
+  rwa [toFinset_mk, toFinset_mk, ← EdgePiece.equiv_def, ← Quotient.eq] at h
+
+@[simp]
+theorem toFinset_inj (e₁ e₂ : Edge) : e₁.toFinset = e₂.toFinset ↔ e₁ = e₂ :=
+  toFinset_injective.eq_iff
+
 unsafe instance : Repr Edge :=
   ⟨fun e _ ↦ repr e.toFinset⟩
+
+/-- An "arbitrary" computable linear order. -/
+instance : LinearOrder Edge :=
+  LinearOrder.lift' (fun e ↦ Finset.Colex.toColex e.toFinset) (fun _ _ ↦ by simp)
 
 /-- Given an edge and an orientation it contains, you can recover a unique edge piece within that
 edge with that orientation.
 
 If the edge does not contain the orientation, we return some dummy edge piece. -/
 def toEdgePiece (e : Edge) (a : Orientation) : EdgePiece :=
-  Quotient.lift (fun e ↦ EdgePiece.withOrientation e a) (by
+  e.lift (fun e ↦ EdgePiece.withOrientation e a) (by
     intro _ _ h
     obtain rfl | rfl := EdgePiece.equiv_iff.1 h <;>
     simp
-  ) e
+  )
+
+/-- Returns the permutation of edge pieces resulting from flipping a given edge. -/
+def flipEquiv (e : Edge) : Equiv.Perm EdgePiece :=
+  e.lift (fun e ↦ Equiv.swap e e.flip) (by
+    intro _ _ h
+    obtain rfl | rfl := EdgePiece.equiv_iff.1 h
+    · rfl
+    · dsimp
+      rw [Equiv.swap_comm]
+  )
+
+@[simp]
+theorem flipEquiv_mk (e : EdgePiece) : flipEquiv ⟦e⟧ = Equiv.swap e e.flip :=
+  rfl
 
 end Edge
 
@@ -270,6 +307,10 @@ instance : Repr CornerPiece :=
 
 instance : Fintype CornerPiece :=
   Fintype.ofEquiv _ EdgeCornerEquiv
+
+/-- An "arbitrary" computable linear order. -/
+instance : LinearOrder CornerPiece :=
+  LinearOrder.lift' _ EdgeCornerEquiv.symm.injective
 
 protected theorem ne (c : CornerPiece) : c.fst ≠ c.snd ∧ c.snd ≠ c.thd ∧ c.thd ≠ c.fst :=
   c.isAdjacent₃.ne
@@ -448,17 +489,35 @@ theorem mk_cyclic (c : CornerPiece) : (⟦c.cyclic⟧ : Corner) = ⟦c⟧ :=
 def toFinset : Corner → Finset Orientation :=
   Quotient.lift CornerPiece.toFinset (fun _ _ ↦ id)
 
+@[simp]
+theorem toFinset_mk (c : CornerPiece) : toFinset ⟦c⟧ = c.toFinset :=
+  rfl
+
+theorem toFinset_injective : Function.Injective toFinset := by
+  intro c₁ c₂
+  refine Quotient.inductionOn₂ c₁ c₂ ?_
+  intro c₁ c₂ h
+  rwa [toFinset_mk, toFinset_mk, ← CornerPiece.equiv_def, ← Quotient.eq] at h
+
+@[simp]
+theorem toFinset_inj (c₁ c₂ : Corner) : c₁.toFinset = c₂.toFinset ↔ c₁ = c₂ :=
+  toFinset_injective.eq_iff
+
 unsafe instance : Repr Corner :=
   ⟨fun c _ ↦ repr c.toFinset⟩
+
+/-- An "arbitrary" computable linear order. -/
+instance : LinearOrder Corner :=
+  LinearOrder.lift' (fun c ↦ Finset.Colex.toColex c.toFinset) (fun _ _ ↦ by simp)
 
 /-- Given a corner and an axis, you can recover a unique corner piece within that corner with that
 axis. -/
 def toCornerPiece (c : Corner) (a : Axis) : CornerPiece :=
-  Quotient.lift (fun c ↦ CornerPiece.withAxis c a) (by
+  c.lift (fun c ↦ CornerPiece.withAxis c a) (by
     intro _ _ h
     obtain rfl | rfl | rfl := CornerPiece.equiv_iff.1 h <;>
     simp
-  ) c
+  )
 
 @[simp]
 theorem toCornerPiece_mk (c : CornerPiece) (a : Axis) : toCornerPiece ⟦c⟧ a = c.withAxis a :=
@@ -466,20 +525,20 @@ theorem toCornerPiece_mk (c : CornerPiece) (a : Axis) : toCornerPiece ⟦c⟧ a 
 
 @[simp]
 theorem axis_toCornerPiece (c : Corner) (a : Axis) : (c.toCornerPiece a).fst.axis = a := by
-  refine Quotient.inductionOn c ?_
+  refine c.inductionOn ?_
   intro c
   rw [toCornerPiece_mk, CornerPiece.axis_withAxis_fst]
 
 @[simp]
 theorem mk_toCornerPiece (c : Corner) (a : Axis) : ⟦c.toCornerPiece a⟧ = c := by
-  refine Quotient.inductionOn c ?_
+  refine c.inductionOn ?_
   intro c
   rw [toCornerPiece_mk, Quotient.eq]
   exact CornerPiece.withAxis_equiv c a
 
 @[simp]
 theorem value_toCornerPiece (c : Corner) (a : Axis) : (c.toCornerPiece a).value a = 0 := by
-  refine Quotient.inductionOn c ?_
+  refine c.inductionOn ?_
   intro c
   rw [toCornerPiece_mk, CornerPiece.value_withAxis]
 

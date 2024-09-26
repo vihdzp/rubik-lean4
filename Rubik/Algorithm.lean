@@ -3,25 +3,8 @@ import Rubik.Move
 open Orientation PRubik
 
 
-namespace Equiv
-
-@[simp]
-theorem symm_mul {α : Type*} (e₁ e₂ : Equiv.Perm α) : (e₁ * e₂).symm = e₂.symm * e₁.symm :=
-  rfl
-
-@[simp]
-theorem swap_conj {α : Type*} [DecidableEq α] (e : Equiv.Perm α) (x y : α) :
-    e * (Equiv.swap x y) * e⁻¹ = Equiv.swap (e x) (e y) := by
-  aesop (add norm Equiv.swap_apply_def)
-
-@[simp]
-theorem swap_conj' {α : Type*} [DecidableEq α] (e : Equiv.Perm α) (x y : α) :
-    e⁻¹ * (Equiv.swap x y) * e = Equiv.swap (e⁻¹ x) (e⁻¹ y) :=
-  swap_conj e⁻¹ x y
-
-end Equiv
-
 namespace Moves
+set_option maxRecDepth 1000
 
 /-- Given two edges `e₁` and `e₂` in the same face `a`, `moveEdgeFace e₁ e₂ a` is the sequence of
 moves repeating `a` until `e₂` is sent to `e₁`. See `moveEdgeFace_move`. -/
@@ -163,7 +146,6 @@ some corners are moved. -/
 private def swapEdgesAux : Moves :=
   [F, U, F, F, F, U, F, U, U, F, F, F, U]
 
-set_option maxRecDepth 750 in
 private theorem edgeEquiv_swapEdgesAux :
     edgeEquiv (move swapEdgesAux) = Equiv.swap (Edge.mk U B) (Edge.mk U L) := by
   decide
@@ -171,12 +153,68 @@ private theorem edgeEquiv_swapEdgesAux :
 /-- A sequence of moves that swaps two edges. All other edges are fixed, but some corners are
 moved. -/
 def swapEdges (e₁ e₂ : Edge) : Moves :=
-  let m := fixEdges e₁ e₂
-  m ++ swapEdgesAux ++ m.symm
+  if e₁ = e₂ then [] else
+    let m := fixEdges e₁ e₂
+    m ++ swapEdgesAux ++ m.symm
 
-theorem edgeEquiv_swapEdges (h : e₁ ≠ e₂) :
-    edgeEquiv (move (swapEdges e₁ e₂)) = Equiv.swap e₁ e₂ := by
-  simp [swapEdges, edgeEquiv_swapEdgesAux, ← mul_assoc]
-  rw [fixEdges_move₁ h]
+@[simp]
+theorem edgeEquiv_swapEdges : edgeEquiv (move (swapEdges e₁ e₂)) = Equiv.swap e₁ e₂ := by
+  rw [swapEdges]
+  split_ifs with h
+  · rw [h, Equiv.swap_self, move_nil, edgeEquiv_one]
+    rfl
+  · simp [edgeEquiv_swapEdgesAux, ← mul_assoc, fixEdges_move₁ h]
+
+/-- A sequence of moves that flips `Edge.mk U B` and `Edge.mk U L`. All other edges are fixed, but
+some corners are moved. -/
+private def flipEdgesAux : Moves :=
+  [B, U, B, B, B, U, B, B, B, R, B, R, R, R, B, U, U, B, B, B]
+
+private theorem edgePieceEquiv_flipEdgesAux :
+    edgePieceEquiv (move flipEdgesAux) = (Edge.mk U B).flipEquiv * (Edge.mk U L).flipEquiv := by
+  decide
+
+/-- A sequence of moves that flips two edges. All other edges are fixed, but some corners are
+moved. -/
+def flipEdges (e₁ e₂ : Edge) : Moves :=
+  if e₁ = e₂ then [] else
+    let m := fixEdges e₁ e₂
+    m ++ flipEdgesAux ++ m.symm
+
+@[simp]
+theorem edgePieceEquiv_flipEdges :
+    edgePieceEquiv (move (flipEdges e₁ e₂)) = e₁.flipEquiv * e₂.flipEquiv := by
+  rw [flipEdges]
+  split_ifs with h
+  · rw [h, move_nil, edgePieceEquiv_one]
+    refine e₂.inductionOn ?_
+    intro e₂
+    rw [Edge.flipEquiv_mk, Equiv.swap_mul_self]
+  · simp [edgePieceEquiv_flipEdgesAux, ← mul_assoc]
+    congr
+    · conv_rhs => rw [← fixEdges_move₁ h, edgeEquiv_mk, Edge.flipEquiv_mk, ← edge_flip]
+      rfl
+    · conv_rhs => rw [← fixEdges_move₂ e₁ e₂, edgeEquiv_mk, Edge.flipEquiv_mk, ← edge_flip]
+      rfl
 
 end Moves
+
+namespace Rubik
+
+/-- A sequence of moves that puts the cube's edges in their correct position, in order. -/
+private def solveEdgesAux (cube : Rubik) (l : List Edge) (hn : l.Nodup)
+    (he : ∀ e, e ∈ l ↔ PRubik.edgeEquiv cube e ≠ e) : Moves :=
+  sorry
+
+private theorem solveEdgesAux_solve (cube : Rubik) (l : List Edge) (hn : l.Nodup)
+    (he : ∀ e, e ∈ l ↔ PRubik.edgeEquiv cube e ≠ e) :
+    PRubik.edgeEquiv (move (solveEdgesAux cube l hn he) * cube) = Equiv.refl _ :=
+  sorry
+
+/-- A sequence of moves that puts the cube's edges in their correct position. -/
+def solveEdges (cube : Rubik) : Moves :=
+  solveEdgesAux cube
+    (((@Finset.univ Edge _).filter fun e ↦ PRubik.edgeEquiv cube e ≠ e).sort (· ≤ ·))
+    (Finset.sort_nodup _ _) (by simp)
+
+end Rubik
