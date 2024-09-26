@@ -99,6 +99,11 @@ theorem flip₂ (e : EdgePiece) : e.flip.flip = e :=
 theorem flip_inj {e₁ e₂ : EdgePiece} : e₁.flip = e₂.flip ↔ e₁ = e₂ :=
   (Function.LeftInverse.injective flip₂).eq_iff
 
+theorem flip_ne (e : EdgePiece) : e.flip ≠ e := by
+  rw [ne_eq, EdgePiece.ext_iff, flip_fst, flip_snd, not_and]
+  intro h
+  cases e.isAdjacent.ne h.symm
+
 /-- Constructs the finset containing the edge's orientations. -/
 def toFinset (e : EdgePiece) : Finset Orientation :=
   ⟨{e.fst, e.snd}, by simpa using e.isAdjacent.ne⟩
@@ -239,6 +244,18 @@ def flipEquiv (e : Edge) : Equiv.Perm EdgePiece :=
 theorem flipEquiv_mk (e : EdgePiece) : flipEquiv ⟦e⟧ = Equiv.swap e e.flip :=
   rfl
 
+theorem flipEquiv_of_ne {e : Edge} {a : EdgePiece} : e ≠ ⟦a⟧ → e.flipEquiv a = a := by
+  refine e.inductionOn ?_
+  intro e he
+  rw [ne_eq, Quotient.eq, @comm _ (· ≈ ·), EdgePiece.equiv_iff, not_or] at he
+  rw [flipEquiv_mk, Equiv.swap_apply_of_ne_of_ne he.1 he.2]
+
+@[simp]
+theorem mk_flipEquiv (e : Edge) (a : EdgePiece) : ⟦e.flipEquiv a⟧ = (⟦a⟧ : Edge) := by
+  obtain rfl | ha := eq_or_ne e ⟦a⟧
+  · simp
+  · rw [flipEquiv_of_ne ha]
+    
 end Edge
 
 /-- A corner piece is an ordered triple of pairwise adjacent orientations, oriented as the standard

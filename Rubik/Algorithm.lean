@@ -197,23 +197,43 @@ theorem edgePieceEquiv_flipEdges :
     · conv_rhs => rw [← fixEdges_move₂ e₁ e₂, edgeEquiv_mk, Edge.flipEquiv_mk, ← edge_flip]
       rfl
 
+@[simp]
+theorem edgeEquiv_flipEdges : edgeEquiv (move (flipEdges e₁ e₂)) = 1 := by
+  ext a
+  refine a.inductionOn ?_
+  intro a
+  simp [edgeEquiv_mk]
+
 end Moves
 
 namespace Rubik
 
 /-- A sequence of moves that puts the cube's edges in their correct position, in the specified
 order. -/
-private def solveEdgesAux (cube : Rubik) (l : List Edge)
-    (he : ∀ e, e ∈ l ↔ PRubik.edgeEquiv cube e ≠ e) : Moves :=
-  match l with
+private def solveEdgesAux (cube : Rubik) : List Edge → Moves
   | [] => []
   | a::l =>
-    let m := Moves.swapEdges a ((PRubik.edgeEquiv cube).symm a)
+    let m := Moves.swapEdges a ((edgeEquiv cube).symm a)
     let c := cube * move m
-    m ++ solveEdgesAux c (l.filter fun e ↦ PRubik.edgeEquiv c e ≠ e) (by
-      intro e
-      simp [c, m, Rubik.move]
-      intro ha
+    m ++ solveEdgesAux c (l.filter fun e ↦ edgeEquiv c e ≠ e)
+termination_by l => l.length
+decreasing_by exact (List.length_filter_le _ _).trans_lt (Nat.lt_succ_self _)
+
+private theorem solveEdgesAux_solve (cube : Rubik) (l : List Edge)
+    (he : ∀ e, e ∈ l ↔ edgeEquiv cube e ≠ e) :
+    edgeEquiv (PRubik.move (solveEdgesAux cube l)) = (edgeEquiv cube)⁻¹ :=
+  match l with
+  | [] => by
+    simp at he
+    have : _  = Equiv.refl _ := Equiv.ext he
+    simp [solveEdgesAux, this]
+  | a::l => by
+    rw [solveEdgesAux]
+    simp
+    rw [solveEdgesAux_solve]
+    · simp
+    · simp
+      intro e ha
       obtain rfl | he₁ := eq_or_ne e a
       · simp at ha
       · obtain rfl | he₂ := eq_or_ne e ((PRubik.edgeEquiv cube).symm a)
@@ -221,22 +241,91 @@ private def solveEdgesAux (cube : Rubik) (l : List Edge)
           simpa using he₁.symm
         · rw [Equiv.swap_apply_of_ne_of_ne he₁ he₂] at ha
           exact (List.mem_cons.1 ((he _).2 ha)).resolve_left he₁
-    )
 termination_by l.length
 decreasing_by exact (List.length_filter_le _ _).trans_lt (Nat.lt_succ_self _)
 
-private theorem solveEdgesAux_solve (cube : Rubik) (l : List Edge)
-    (he : ∀ e, e ∈ l ↔ PRubik.edgeEquiv cube e ≠ e) :
-    PRubik.edgeEquiv (cube * move (solveEdgesAux cube l he)) = Equiv.refl _ :=
-  sorry
-
 /-- A sequence of moves that puts the cube's edges in their correct position. -/
 def solveEdges (cube : Rubik) : Moves :=
-  solveEdgesAux cube ((Finset.univ.filter fun e ↦ PRubik.edgeEquiv cube e ≠ e).sort (· ≤ ·))
-    (by simp)
+  solveEdgesAux cube ((Finset.univ.filter fun e ↦ edgeEquiv cube e ≠ e).sort (· ≤ ·))
 
+@[simp]
 theorem solveEdges_solve (cube : Rubik) :
-    PRubik.edgeEquiv (cube * move (solveEdges cube)) = Equiv.refl _ :=
-  solveEdgesAux_solve _ _ _ 
+    edgeEquiv (PRubik.move (solveEdges cube)) = (edgeEquiv cube)⁻¹ := by
+  apply solveEdgesAux_solve
+  simp
+
+/-- A sequence of moves that puts the cube's edges in their correct orientation, in the specified
+order. -/
+private def solveEdgePiecesAux : List Edge → Moves
+  | [] | [_] => []
+  | a::b::l => Moves.flipEdges a b ++ solveEdgePiecesAux l
+
+theorem solveEdgePiecesAux_solve (cube : Rubik) (hc : edgeEquiv cube = 1)
+    (l : List Edge) (hl : l.Nodup) (he : ∀ e, ⟦e⟧ ∈ l ↔ edgePieceEquiv cube e ≠ e) :
+    edgePieceEquiv (PRubik.move (solveEdgePiecesAux l)) = (edgePieceEquiv cube)⁻¹ :=
+  have hc' (e) : cube.1.edgePieceEquiv e = e ∨ cube.1.edgePieceEquiv e = e.flip :=
+    EdgePiece.equiv_iff.1 <| Quotient.exact <| Equiv.ext_iff.1 hc ⟦e⟧
+  match l with
+  | [] => by simpa [solveEdgePiecesAux, Equiv.ext_iff] using he
+  | [a] => by
+    have : (1 : ℤˣ) ≠ -1 := by decide
+    apply (this _).elim
+    conv_lhs => rw [← (Rubik.isValid cube).edgeFlip, edgeFlip, MonoidHom.coe_comp,
+      Function.comp_apply, edgePieceEquivHom_apply]
+    suffices edgePieceEquiv cube = a.flipEquiv by
+      rw [this]
+      refine a.inductionOn ?_
+      simpa using fun a ↦ a.flip_ne.symm
+    ext e
+    simp_rw [List.mem_singleton] at he
+    obtain rfl | ha := eq_or_ne a ⟦e⟧
+    · rw [Edge.flipEquiv_mk, Equiv.swap_apply_left]
+      exact (hc' _).resolve_left ((he _).1 rfl)
+    · rwa [Edge.flipEquiv_of_ne ha, ← not_ne_iff, ← he, eq_comm]
+  | a::b::l => by
+    simp only [List.nodup_cons, List.mem_cons, not_or, ← ne_eq] at hl
+    rw [solveEdgePiecesAux, PRubik.move_append, edgePieceEquiv_mul, Moves.edgePieceEquiv_flipEdges,
+      solveEdgePiecesAux_solve (cube * move (Moves.flipEdges a b)) _ _ hl.2.2]
+    · simp [mul_assoc]
+    · simp
+      intro e
+      have H (e : EdgePiece) : edgePieceEquiv cube e ≠ e ↔ (edgePieceEquiv cube e).flip = e := by
+        constructor <;> intro h
+        · rw [← EdgePiece.flip_inj, EdgePiece.flip₂]
+          exact (hc' _).resolve_left h
+        · conv_rhs => rw [← h]
+          exact (EdgePiece.flip_ne _).symm
+      obtain rfl | ha := eq_or_ne ⟦e⟧ a
+      · rw [Edge.flipEquiv_of_ne hl.1.1.symm]
+        simp [hl.1.2]
+        rw [← H, ← he]
+        exact List.mem_cons_self _ _
+      · obtain rfl | hb := eq_or_ne ⟦e⟧ b
+        · rw [Edge.flipEquiv_mk, Equiv.swap_apply_left, Edge.flipEquiv_of_ne, ← ne_eq]
+          simp [hl.2.1]
+          · rw [← H, ← he]
+            exact List.mem_cons_of_mem _ (List.mem_cons_self _ _)
+          · rw [Edge.mk_flip]
+            exact hl.1.1
+        · rw [Edge.flipEquiv_of_ne hb.symm, Edge.flipEquiv_of_ne ha.symm, ← ne_eq, ← he]
+          simp [ha, hb]
+    · simpa
+
+/-- A sequence of moves that puts the cube's edges in their correct orientation. -/
+def solveEdgePieces (cube : Rubik) : Moves := by
+  refine solveEdgePiecesAux ((Finset.univ.filter fun e : Edge ↦ e.lift
+    (fun e ↦ PRubik.edgePieceEquiv cube e ≠ e) ?_).sort (· ≤ ·))
+  intro e₁ e₂ h
+  obtain rfl | rfl := EdgePiece.equiv_iff.1 h <;> simp
+
+@[simp]
+theorem solveEdgePieces_solve (cube : Rubik) (hc : PRubik.edgeEquiv cube = 1) :
+    edgePieceEquiv (PRubik.move (solveEdgePieces cube)) = (edgePieceEquiv cube)⁻¹ := by
+  apply solveEdgePiecesAux_solve _ hc _ (Finset.sort_nodup _ _)
+  simp [edgeEquiv_mk]
+
+def test : Rubik := move [L, R, B, F]
+
+#eval (test * move (solveEdges test)) * move (solveEdgePieces (test * move (solveEdges test)))
 
 end Rubik

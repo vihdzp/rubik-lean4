@@ -408,4 +408,16 @@ namespace Rubik
 def move (m : Moves) : Rubik :=
   ⟨_, PRubik.isValid_move m⟩
 
+@[simp]
+theorem val_move (m : Moves) : (move m).val = PRubik.move m :=
+  rfl
+
+@[simp]
+theorem move_nil : move [] = 1 :=
+  rfl
+
+@[simp]
+theorem move_append (l m : Moves) : move (l ++ m) = move l * move m :=
+  Subtype.ext <| PRubik.move_append l m
+
 end Rubik

@@ -119,7 +119,6 @@ abbrev Solved : PRubik := 1
 before the second's.
 
 This matches multiplication on `Equiv.Perm`, rather than the usual convention for functions. -/
-@[simps]
 instance : Mul PRubik :=
   ⟨fun cube₁ cube₂ ↦ by
     refine ⟨cube₁.edgePieceEquiv * cube₂.edgePieceEquiv,
@@ -128,6 +127,16 @@ instance : Mul PRubik :=
       rw [cube₂.edge_flip, cube₁.edge_flip]
     · dsimp
       rw [cube₂.corner_cyclic, cube₁.corner_cyclic]⟩
+
+@[simp]
+theorem edgePieceEquiv_mul (cube₁ cube₂ : PRubik) :
+    (cube₁ * cube₂).edgePieceEquiv = cube₁.edgePieceEquiv * cube₂.edgePieceEquiv :=
+  rfl
+
+@[simp]
+theorem cornerPieceEquiv_mul (cube₁ cube₂ : PRubik) :
+    (cube₁ * cube₂).cornerPieceEquiv = cube₁.cornerPieceEquiv * cube₂.cornerPieceEquiv :=
+  rfl
 
 @[simp]
 theorem edge_flip_inv (cube : PRubik) (e : EdgePiece) :
@@ -162,6 +171,14 @@ theorem cornerPieceEquiv_equiv (cube : PRubik) {c₁ c₂ : CornerPiece} (h : c�
 instance : Inv PRubik :=
   ⟨fun cube ↦ ⟨cube.edgePieceEquiv⁻¹, cube.cornerPieceEquiv⁻¹,
     cube.edge_flip_inv, cube.corner_cyclic_inv⟩⟩
+
+@[simp]
+theorem edgePieceEquiv_inv (cube : PRubik) : cube⁻¹.edgePieceEquiv = cube.edgePieceEquiv⁻¹ :=
+  rfl
+
+@[simp]
+theorem cornerPieceEquiv_inv (cube : PRubik) : cube⁻¹.cornerPieceEquiv = cube.cornerPieceEquiv⁻¹ :=
+  rfl
 
 /-- The "pre-Rubik's cube" group. This isn't the true Rubik's cube group as it contains positions
 that are unreachable by valid moves. -/
@@ -425,6 +442,15 @@ theorem isValid_iff :
     IsValid cube ↔ parity cube = 1 ∧ edgeFlip cube = 1 ∧ cornerRotation cube = 1 := by
   rw [IsValid, invariant]
   simp only [MonoidHom.mem_ker, MonoidHom.prod_apply, Prod.mk_eq_one]
+
+theorem IsValid.parity (h : IsValid cube) : parity cube = 1 :=
+  (isValid_iff.1 h).1
+
+theorem IsValid.edgeFlip (h : IsValid cube) : edgeFlip cube = 1 :=
+  (isValid_iff.1 h).2.1
+
+theorem IsValid.cornerRotation (h : IsValid cube) : cornerRotation cube = 1 :=
+  (isValid_iff.1 h).2.2
 
 end PRubik
 
