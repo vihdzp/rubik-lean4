@@ -203,7 +203,7 @@ namespace Rubik
 
 /-- A sequence of moves that puts the cube's edges in their correct position, in the specified
 order. -/
-private def solveEdgesAux (cube : Rubik) (l : List Edge) (hn : l.Nodup)
+private def solveEdgesAux (cube : Rubik) (l : List Edge)
     (he : ∀ e, e ∈ l ↔ PRubik.edgeEquiv cube e ≠ e) : Moves :=
   match l with
   | [] => []
@@ -211,8 +211,6 @@ private def solveEdgesAux (cube : Rubik) (l : List Edge) (hn : l.Nodup)
     let m := Moves.swapEdges a ((PRubik.edgeEquiv cube).symm a)
     let c := cube * move m
     m ++ solveEdgesAux c (l.filter fun e ↦ PRubik.edgeEquiv c e ≠ e) (by
-      sorry
-    ) (by
       intro e
       simp [c, m, Rubik.move]
       intro ha
@@ -227,19 +225,18 @@ private def solveEdgesAux (cube : Rubik) (l : List Edge) (hn : l.Nodup)
 termination_by l.length
 decreasing_by exact (List.length_filter_le _ _).trans_lt (Nat.lt_succ_self _)
 
-
-private theorem solveEdgesAux_solve (cube : Rubik) (l : List Edge) (hn : l.Nodup)
+private theorem solveEdgesAux_solve (cube : Rubik) (l : List Edge)
     (he : ∀ e, e ∈ l ↔ PRubik.edgeEquiv cube e ≠ e) :
-    PRubik.edgeEquiv (cube * move (solveEdgesAux cube l hn he)) = Equiv.refl _ :=
+    PRubik.edgeEquiv (cube * move (solveEdgesAux cube l he)) = Equiv.refl _ :=
   sorry
 
 /-- A sequence of moves that puts the cube's edges in their correct position. -/
 def solveEdges (cube : Rubik) : Moves :=
   solveEdgesAux cube ((Finset.univ.filter fun e ↦ PRubik.edgeEquiv cube e ≠ e).sort (· ≤ ·))
-    (Finset.sort_nodup _ _) (by simp)
+    (by simp)
 
 theorem solveEdges_solve (cube : Rubik) :
     PRubik.edgeEquiv (cube * move (solveEdges cube)) = Equiv.refl _ :=
-  solveEdgesAux_solve _ _ _ _
+  solveEdgesAux_solve _ _ _ 
 
 end Rubik
