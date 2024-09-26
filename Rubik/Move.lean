@@ -299,10 +299,10 @@ theorem foldl_eq_move (cube : PRubik) (m : Moves) :
   induction m with
   | nil => exact fun _ ↦ rfl
   | cons a m IH =>
-      intro cube
-      simp_rw [move, List.foldl_cons, IH]
-      rw [← mul_assoc]
-      rfl
+    intro cube
+    simp_rw [move, List.foldl_cons, IH]
+    rw [← mul_assoc]
+    rfl
 
 @[simp]
 theorem move_cons (r : Orientation) (m : Moves) :
@@ -368,16 +368,16 @@ theorem IsSolvable.mul (h₁ : IsSolvable cube₁) (h₂ : IsSolvable cube₂) :
   use l ++ m
   rw [move_append, hl, hm]
 
-theorem IsSolvable.symm (h : IsSolvable cube) : IsSolvable cube⁻¹ := by
+theorem IsSolvable.inv (h : IsSolvable cube) : IsSolvable cube⁻¹ := by
   obtain ⟨m, hm⟩ := h
   use m.symm
   rwa [move_symm, inv_inj]
 
-theorem isSolvable_symm_iff : IsSolvable cube⁻¹ ↔ IsSolvable cube := by
-  refine ⟨?_, IsSolvable.symm⟩
+theorem isSolvable_inv_iff : IsSolvable cube⁻¹ ↔ IsSolvable cube := by
+  refine ⟨?_, IsSolvable.inv⟩
   intro h
   rw [← inv_inv cube]
-  exact h.symm
+  exact h.inv
 
 /-- A cube is solvable iff it can be unscrambled. -/
 theorem isSolvable_iff : IsSolvable cube ↔ ∃ m, cube * move m = 1 := by
@@ -386,7 +386,7 @@ theorem isSolvable_iff : IsSolvable cube ↔ ∃ m, cube * move m = 1 := by
   · use m.symm
     rw [move_symm, h, mul_inv_cancel]
   · rw [← inv_eq_iff_mul_eq_one, inv_eq_iff_eq_inv] at h
-    exact h ▸ (isSolvable_move m).symm
+    exact h ▸ (isSolvable_move m).inv
 
 theorem isValid_move (m : Moves) : IsValid (move m) := by
   induction m with

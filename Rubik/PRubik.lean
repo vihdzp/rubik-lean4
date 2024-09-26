@@ -116,7 +116,9 @@ theorem cornerPieceEquiv_one : cornerPieceEquiv 1 = 1 :=
 abbrev Solved : PRubik := 1
 
 /-- The product of two Rubik's cubes is the Rubik's cube where the first's scramble is performed
-after the second's. -/
+before the second's.
+
+This matches multiplication on `Equiv.Perm`, rather than the usual convention for functions. -/
 @[simps]
 instance : Mul PRubik :=
   ⟨fun cube₁ cube₂ ↦ by
