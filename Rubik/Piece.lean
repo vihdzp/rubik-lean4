@@ -1,3 +1,4 @@
+import Rubik.Equiv
 import Rubik.Orientation
 import Mathlib.Combinatorics.Colex
 import Mathlib.Data.ZMod.Defs
@@ -255,7 +256,14 @@ theorem mk_flipEquiv (e : Edge) (a : EdgePiece) : ⟦e.flipEquiv a⟧ = (⟦a⟧
   obtain rfl | ha := eq_or_ne e ⟦a⟧
   · simp
   · rw [flipEquiv_of_ne ha]
-    
+
+@[simp]
+theorem flipEquiv_flip (e : Edge) (a : EdgePiece) : e.flipEquiv a.flip = (e.flipEquiv a).flip := by
+  obtain rfl | ha := eq_or_ne e ⟦a⟧
+  · simp
+  · rw [flipEquiv_of_ne, flipEquiv_of_ne ha]
+    rwa [mk_flip]
+
 end Edge
 
 /-- A corner piece is an ordered triple of pairwise adjacent orientations, oriented as the standard
@@ -363,6 +371,14 @@ theorem cyclic_inj {c₁ c₂ : CornerPiece} : c₁.cyclic = c₂.cyclic ↔ c�
   · rintro rfl
     rfl
 
+theorem cyclic_ne (c : CornerPiece) : c.cyclic ≠ c := by
+  rw [ne_eq, ext_iff, not_and, cyclic_fst]
+  intro h
+  cases c.isAdjacent.ne h.symm
+
+theorem cyclic_cyclic_ne (c : CornerPiece) : c.cyclic.cyclic ≠ c :=
+  (cyclic_ne c.cyclic.cyclic).symm
+
 theorem axis_thd (c : CornerPiece) : c.thd.axis = c.fst.axis.other c.snd.axis := by
   rw [c.isAdjacent₃.eq_cross, axis_cross]
 
@@ -457,6 +473,12 @@ theorem equiv_iff : ∀ {c₁ c₂ : CornerPiece},
     c₁ ≈ c₂ ↔ c₁ = c₂ ∨ c₁ = c₂.cyclic ∨ c₁.cyclic = c₂ := by
   simp_rw [equiv_def]
   decide
+
+theorem equiv_iff' {c₁ c₂ : CornerPiece} :
+    c₁ ≈ c₂ ↔ c₁ = c₂ ∨ c₁ = c₂.cyclic ∨ c₁ = c₂.cyclic.cyclic := by
+  rw [equiv_iff]
+  convert Iff.rfl using 3
+  rw [← cyclic_inj, cyclic₃]
 
 instance : DecidableRel (α := CornerPiece) (· ≈ ·) :=
   fun _ _ ↦ decidable_of_iff _ equiv_iff.symm
@@ -558,5 +580,45 @@ theorem value_toCornerPiece (c : Corner) (a : Axis) : (c.toCornerPiece a).value 
   refine c.inductionOn ?_
   intro c
   rw [toCornerPiece_mk, CornerPiece.value_withAxis]
+
+/-- Returns the permutation of corner pieces resulting from rotating a given corner
+**clockwise**. -/
+def rotateEquiv (c : Corner) : Equiv.Perm CornerPiece :=
+  c.lift (fun c ↦ Equiv.cycle c c.cyclic c.cyclic.cyclic) (by
+    intro _ _ h
+    obtain rfl | rfl | rfl := CornerPiece.equiv_iff.1 h <;>
+      dsimp <;>
+      repeat rw [Equiv.cycle_cyclic]
+  )
+
+@[simp]
+theorem rotateEquiv_mk (c : CornerPiece) :
+    rotateEquiv ⟦c⟧ = Equiv.cycle c c.cyclic c.cyclic.cyclic :=
+  rfl
+
+theorem rotateEquiv_of_ne {c : Corner} {a : CornerPiece} : c ≠ ⟦a⟧ → c.rotateEquiv a = a := by
+  refine c.inductionOn ?_
+  intro c hc
+  rw [ne_eq, Quotient.eq, @comm _ (· ≈ ·), CornerPiece.equiv_iff', not_or, not_or] at hc
+  rw [rotateEquiv_mk, Equiv.cycle_apply_of_ne hc.1 hc.2.1 hc.2.2]
+
+@[simp]
+theorem mk_rotateEquiv (c : Corner) (a : CornerPiece) : ⟦c.rotateEquiv a⟧ = (⟦a⟧ : Corner) := by
+  obtain rfl | ha := eq_or_ne c ⟦a⟧
+  · rw [rotateEquiv_mk, Quotient.eq, Equiv.cycle_fst]
+    · exact a.cyclic_equiv
+    · rw [ne_eq, CornerPiece.cyclic_inj]
+      exact a.cyclic_ne.symm
+    · exact a.cyclic_cyclic_ne
+  · rw [rotateEquiv_of_ne ha]
+
+@[simp]
+theorem rotateEquiv_cyclic (c : Corner) (a : CornerPiece) :
+    c.rotateEquiv a.cyclic = (c.rotateEquiv a).cyclic := by
+  obtain rfl | ha := eq_or_ne c ⟦a⟧
+  · rw [rotateEquiv_mk, Equiv.cycle_fst a.cyclic.cyclic_ne.symm a.cyclic_cyclic_ne,
+      Equiv.cycle_snd a.cyclic_ne.symm a.cyclic_cyclic_ne]
+  · rw [rotateEquiv_of_ne, rotateEquiv_of_ne ha]
+    rwa [mk_cyclic]
 
 end Corner

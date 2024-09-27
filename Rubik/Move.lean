@@ -73,6 +73,10 @@ theorem isValid_ofOrientation (r : Orientation) : IsValid (ofOrientation r) :=
 
 end PRubik
 
+/-- A list of moves to be performed on a Rubik's cube.
+
+The `Repr` instance on this type will automatically deduplicate the list. This means for instance
+that `[L, L, F, F, F, F, L, L]` will print as `[]`, despite being different lists. -/
 abbrev Moves : Type := List Orientation
 
 namespace Moves
@@ -279,6 +283,21 @@ theorem deduplicate_replicate (n : ℕ) : deduplicate (replicate n a) = replicat
 @[simp]
 theorem deduplicate_symm_symm (m : Moves) : deduplicate m.symm.symm = deduplicate m := by
   rw [← deduplicate_deduplicateCore, deduplicateCore_symm_symm, deduplicate_deduplicateCore]
+
+/-- Prints a (deduplicated) sequence of moves using Rubik's cube notation. -/
+private def toString (m : Moves) : Option Lean.Format :=
+  runLengthRecOn m.deduplicate none fun n a _ _ (IH : Option Lean.Format) ↦
+    let n := match n with
+      | 1 => ""
+      | 2 => "2"
+      | _ => "'"
+    let IH := match IH with
+      | none => Std.Format.text ""
+      | some x => " " ++ x
+    some (repr a ++ n ++ IH)
+
+instance : Repr Moves :=
+  ⟨fun m _ ↦ (toString m).getD "[]"⟩
 
 end Moves
 

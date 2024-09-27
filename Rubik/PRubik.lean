@@ -1,6 +1,5 @@
 import Mathlib.GroupTheory.Perm.Sign
 import Mathlib.Data.Fintype.Units
-import Rubik.Equiv
 import Rubik.Piece
 
 /-!
@@ -241,6 +240,11 @@ theorem edgeEquiv_mk (cube : PRubik) (e : EdgePiece) :
 theorem edgeEquiv_one : edgeEquiv 1 = 1 :=
   map_one _
 
+theorem edgeEquiv_of_edgePieceEquiv_eq_one (h : edgePieceEquiv cube = 1) : edgeEquiv cube = 1 := by
+  ext e
+  refine e.inductionOn ?_
+  simp [edgeEquiv_mk, h]
+
 /-- A Rubik's cube defines a permutation of corners. -/
 def cornerEquiv : PRubik →* Perm Corner where
   toFun cube := by
@@ -284,6 +288,12 @@ theorem cornerEquiv_mk (cube : PRubik) (c : CornerPiece) :
 theorem cornerEquiv_one : cornerEquiv 1 = 1 :=
   map_one _
 
+theorem cornerEquiv_of_cornerPieceEquiv_eq_one (h : cornerPieceEquiv cube = 1) :
+    cornerEquiv cube = 1 := by
+  ext c
+  refine c.inductionOn ?_
+  simp [cornerEquiv_mk, h]
+
 /-- The total parity of a Rubik's cube is the combined parity of edge and corner permutations.
 
 This is an invariant under any valid move. -/
@@ -308,39 +318,14 @@ def edgeFlip : PRubik →* ℤˣ :=
   Perm.sign.comp edgePieceEquivHom
 
 /-- Flips a single edge. -/
-private def flipEdgeAux (e : EdgePiece) : PRubik where
-  edgePieceEquiv := swap e e.flip
-  cornerPieceEquiv := 1
-  edge_flip e' := by
-    obtain rfl | he := eq_or_ne e' e
-    · rw [swap_apply_right, swap_apply_left, EdgePiece.flip₂]
-    · obtain rfl | he' := eq_or_ne e' e.flip
-      · rw [swap_apply_right, EdgePiece.flip₂, swap_apply_left]
-      · rw [swap_apply_of_ne_of_ne he he', swap_apply_of_ne_of_ne] <;>
-        rwa [ne_eq, ← EdgePiece.flip_inj]
-  corner_cyclic _ := rfl
-
-/-- Flips a single edge. -/
 def flipEdge (e : Edge) : PRubik where
   edgePieceEquiv := e.flipEquiv
   cornerPieceEquiv := 1
-  edge_flip e' := by
-    refine e.inductionOn ?_
-    intro e
-    rw [Edge.flipEquiv_mk]
-    obtain rfl | he := eq_or_ne e' e
-    · rw [swap_apply_left, swap_apply_right, EdgePiece.flip₂]
-    · obtain rfl | he' := eq_or_ne e' e.flip
-      · rw [EdgePiece.flip₂, swap_apply_left, swap_apply_right]
-      · rw [swap_apply_of_ne_of_ne he he']
-        rw [ne_eq, ← EdgePiece.flip_inj] at he he'
-        rw [EdgePiece.flip₂] at he'
-        rw [swap_apply_of_ne_of_ne he' he]
+  edge_flip a := e.flipEquiv_flip a
   corner_cyclic _ := rfl
 
 @[simp]
-theorem edgePieceEquiv_flipEdge (e : Edge) :
-    edgePieceEquiv (flipEdge e) = e.flipEquiv :=
+theorem edgePieceEquiv_flipEdge (e : Edge) : edgePieceEquiv (flipEdge e) = e.flipEquiv :=
   rfl
 
 @[simp]
@@ -393,17 +378,11 @@ def cornerRotation : PRubik →* Multiplicative (ZMod 3) where
     simp
 
 /-- Rotates a single corner **clockwise**. -/
-def rotateCornerAux (c : CornerPiece) : PRubik where
+def rotateCorner (c : Corner) : PRubik where
   edgePieceEquiv := 1
-  cornerPieceEquiv := cycle₃ c c.cyclic c.cyclic.cyclic
+  cornerPieceEquiv := c.rotateEquiv
   edge_flip _ := rfl
-  corner_cyclic := by
-    revert c
-    decide
-
-/-- Rotates a single corner **clockwise**. -/
-def rotateCorner (c : Corner) : PRubik :=
-  Quotient.liftOn c rotateCornerAux (by decide)
+  corner_cyclic := c.rotateEquiv_cyclic
 
 /-- The **Rubik's cube invariant**. This is the combined `parity`, `edgeFlip`, and `cornerRotation`
 of a Rubik's cube.
