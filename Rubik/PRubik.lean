@@ -59,44 +59,6 @@ def cornerPiece (cube : PRubik) (a b c : Orientation) (h : IsAdjacent₃ a b c :
     CornerPiece :=
   cube.cornerPieceEquiv ⟨a, b, c, h⟩
 
-/-- A list with all non-equivalent edges. This is an auxiliary function for the `PRubik.Repr`
-instance. -/
-private def edges : List EdgePiece :=
-  [EdgePiece.mk' U B, EdgePiece.mk' U L, EdgePiece.mk' U R, EdgePiece.mk' U F,
-    EdgePiece.mk' L B, EdgePiece.mk' L F, EdgePiece.mk' F R, EdgePiece.mk' R B,
-    EdgePiece.mk' D B, EdgePiece.mk' D L, EdgePiece.mk' D R, EdgePiece.mk' D F]
-
-/-- The corners in a Rubik's cube. This is an auxiliary function for the `Repr` instance. -/
-private def corners (cube : PRubik) : List CornerPiece :=
-  [cube.cornerPiece U B L, cube.cornerPiece U R B, cube.cornerPiece U L F, cube.cornerPiece U F R,
-    cube.cornerPiece D L B, cube.cornerPiece D B R, cube.cornerPiece D F L, cube.cornerPiece D R F]
-
-open Std.Format in
-instance : Repr PRubik := ⟨fun cube _ ↦
-  let e := edges.map cube.edgePieceEquiv
-  let c := cube.corners
-  have : e.length = 12 := rfl
-  have : c.length = 8 := rfl
-  let space := text "⬛⬛⬛"
-  -- Up face
-  space ++ c[0].fst ++ e[0].fst ++ c[1].fst ++ space ++ line
-    ++ space ++ e[1].fst ++ U ++ e[2].fst ++ space ++ line
-    ++ space ++ c[2].fst ++ e[3].fst ++ c[3].fst ++ space ++ line
-  -- Left, front, and right faces
-  ++ c[0].thd ++ e[1].snd ++ c[2].snd ++ c[2].thd ++ e[3].snd ++
-    c[3].snd ++ c[3].thd ++ e[2].snd ++ c[1].snd ++ line
-  ++ e[4].fst ++ L ++ e[5].fst ++ e[5].snd ++ F ++ e[6].fst ++ e[6].snd ++ R ++ e[7].fst ++ line
-  ++ c[4].snd ++ e[9].snd ++ c[6].thd ++ c[6].snd ++ e[11].snd ++
-    c[7].thd ++ c[7].snd ++ e[10].snd ++ c[5].thd ++ line
-  -- Down face
-  ++ space ++ c[6].fst ++ e[11].fst ++ c[7].fst ++ space ++ line
-    ++ space ++ e[9].fst ++ D ++ e[10].fst ++ space ++ line
-    ++ space ++ c[4].fst ++ e[8].fst ++ c[5].fst ++ space ++ line
-  -- Back face
-  ++ space ++ c[4].thd ++ e[8].snd ++ c[5].snd ++ space ++ line
-    ++ space ++ e[4].snd ++ B ++ e[7].snd ++ space ++ line
-    ++ space ++ c[0].snd ++ e[0].snd ++ c[1].thd ++ space⟩
-
 /-- The solved Rubik's cube. -/
 instance : One PRubik :=
   ⟨1, 1, fun _ ↦ rfl, fun _ ↦ rfl⟩
@@ -166,7 +128,6 @@ theorem cornerPieceEquiv_equiv (cube : PRubik) {c₁ c₂ : CornerPiece} (h : c�
     exact (CornerPiece.cyclic_equiv _).symm
 
 /-- The inverse of a Rubik's cube is obtained by performing its moves backwards. -/
-@[simps]
 instance : Inv PRubik :=
   ⟨fun cube ↦ ⟨cube.edgePieceEquiv⁻¹, cube.cornerPieceEquiv⁻¹,
     cube.edge_flip_inv, cube.corner_cyclic_inv⟩⟩
@@ -298,7 +259,7 @@ theorem cornerEquiv_of_cornerPieceEquiv_eq_one (h : cornerPieceEquiv cube = 1) :
 
 This is an invariant under any valid move. -/
 def parity : PRubik →* ℤˣ :=
-  (Perm.sign.comp edgeEquiv) * (Perm.sign.comp cornerEquiv)
+  Perm.sign.comp edgeEquiv * Perm.sign.comp cornerEquiv
 
 /-- The Rubik's cube with a single edge swapped with its counterclockwise edge in the same face. -/
 def swapEdges (h : IsAdjacent a b) : PRubik where
@@ -442,9 +403,6 @@ namespace Rubik
 /-- Construct a Rubik's cube, inferring the validity hypothesis. -/
 def mk (cube : PRubik) (h : PRubik.IsValid cube := by decide) : Rubik :=
   ⟨cube, h⟩
-
-instance : Repr Rubik :=
-  ⟨fun cube ↦ reprPrec cube.val⟩
 
 theorem isValid (cube : Rubik) : cube.val.IsValid :=
   cube.2

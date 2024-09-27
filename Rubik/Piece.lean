@@ -1,8 +1,8 @@
+import Mathlib.Combinatorics.Colex
+import Mathlib.Data.Finset.Sort
+import Mathlib.Data.ZMod.Defs
 import Rubik.Equiv
 import Rubik.Orientation
-import Mathlib.Combinatorics.Colex
-import Mathlib.Data.ZMod.Defs
-import Mathlib.Data.Finset.Sort
 
 /-!
 Defines structures for the pieces in a Rubik's cube.
@@ -264,6 +264,12 @@ theorem flipEquiv_flip (e : Edge) (a : EdgePiece) : e.flipEquiv a.flip = (e.flip
   · rw [flipEquiv_of_ne, flipEquiv_of_ne ha]
     rwa [mk_flip]
 
+@[simp]
+theorem flipEquiv_flipEquiv (e : Edge) : e.flipEquiv * e.flipEquiv = 1 := by
+  refine e.inductionOn ?_
+  intro e
+  rw [flipEquiv_mk, Equiv.swap_mul_self]
+
 end Edge
 
 /-- A corner piece is an ordered triple of pairwise adjacent orientations, oriented as the standard
@@ -499,6 +505,16 @@ theorem withAxis_eq_of_equiv {c₁ c₂ : CornerPiece} (h : c₁ ≈ c₂) (a : 
   · rfl
   · rw [withAxis_cyclic]
   · rw [withAxis_cyclic]
+
+theorem eq_of_value_eq {c₁ c₂ : CornerPiece} {a : Axis} (hc : c₁ ≈ c₂)
+    (h : c₁.value a = c₂.value a) : c₁ = c₂ := by
+  rw [equiv_iff] at hc
+  obtain rfl | rfl | rfl := hc
+  · rfl
+  · simp at h
+    contradiction
+  · simp at h
+    contradiction
 
 end CornerPiece
 

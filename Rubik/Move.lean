@@ -75,8 +75,8 @@ end PRubik
 
 /-- A list of moves to be performed on a Rubik's cube.
 
-The `Repr` instance on this type will automatically deduplicate the list. This means for instance
-that `[L, L, F, F, F, F, L, L]` will print as `[]`, despite being different lists. -/
+The `Repr` instance on this type will automatically deduplicate the list for convenience. This means
+for instance that `[L, L, F, F, F, F, L, L]` will print as `[]`, despite being different lists. -/
 abbrev Moves : Type := List Orientation
 
 namespace Moves
@@ -368,9 +368,10 @@ theorem move_deduplicate (m : Moves) : move m.deduplicate = move m := by
   | succ n IH => rw [Function.iterate_succ_apply', move_deduplicateCore, IH]
 
 /-- A Rubik's cube is solvable when there exists a sequence of moves that can assemble it from the
-solved state.
+solved state. See `isSolvable_iff` for the equivalence with being able to unscramble the cube.
 
-See `isSolvable_iff` for the equivalence with being able to unscramble the cube. -/
+A main result we show is `isValid_iff_isSolvable`: a Rubik's cube can be solved iff it satisfies the
+Rubik's cube invariant. -/
 def IsSolvable (cube : PRubik) : Prop :=
   ∃ m : Moves, move m = cube
 
@@ -392,11 +393,8 @@ theorem IsSolvable.inv (h : IsSolvable cube) : IsSolvable cube⁻¹ := by
   use m.symm
   rwa [move_symm, inv_inj]
 
-theorem isSolvable_inv_iff : IsSolvable cube⁻¹ ↔ IsSolvable cube := by
-  refine ⟨?_, IsSolvable.inv⟩
-  intro h
-  rw [← inv_inv cube]
-  exact h.inv
+theorem isSolvable_inv_iff : IsSolvable cube⁻¹ ↔ IsSolvable cube :=
+  ⟨IsSolvable.inv, IsSolvable.inv⟩
 
 /-- A cube is solvable iff it can be unscrambled. -/
 theorem isSolvable_iff : IsSolvable cube ↔ ∃ m, cube * move m = 1 := by
@@ -414,7 +412,7 @@ theorem isValid_move (m : Moves) : IsValid (move m) := by
       rw [move_cons]
       exact (isValid_ofOrientation r).mul IH
 
-/-- A solvable cube is valid. -/
+/-- A solvable cube is valid, i.e. retains the invariant. -/
 theorem IsSolvable.isValid (h : IsSolvable cube) : IsValid cube := by
   obtain ⟨m, rfl⟩ := h
   exact isValid_move m

@@ -14,6 +14,15 @@ variable {α : Type*}
 theorem symm_mul (e₁ e₂ : Perm α) : (e₁ * e₂).symm = e₂.symm * e₁.symm :=
   rfl
 
+/-- An equivalence can't have only one fixed point. -/
+theorem not_equiv_ne_iff (e : Perm α) (a : α) : ¬ (∀ x, x = a ↔ e x ≠ x) := by
+  intro H
+  have := (H a).1 rfl
+  rw [ne_eq, ← e.eq_symm_apply, ← ne_eq] at this
+  apply this
+  conv_lhs at this => rw [← e.apply_symm_apply a]
+  rwa [← H, eq_comm] at this
+
 variable (e : Perm α) (a b c d x y z : α) [DecidableEq α]
 
 @[simp]

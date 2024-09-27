@@ -1,3 +1,4 @@
--- This module serves as the root of the `Rubik` library.
--- Import modules here that should be built as part of the library.
-import Rubik.Basic
+import Rubik.Card
+import Rubik.FromPieces
+
+/-! Imports all other modules. -/

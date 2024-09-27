@@ -1,7 +1,42 @@
 import Rubik.Move
 
+/-!
+This file contains an algorithm which solves any Rubik's cube satisfying the relevant invariants. In
+particular, this allows us to show `isValid_iff_isSolvable`.
+
+The algorithm we implement is quite naive, compared to even the simplest methods employed by humans.
+This heavily cuts down on the amount of explicit computation that needs to be performed, at the cost
+of coming up with much longer solutions. An average solution will take upwards of a thousand quarter
+turns, or around 400 moves after deduplicating and bundling moves on the same face together. On the
+other hand, it is known that to solve any Rubik's cube, [20 moves suffices](https://cube20.org).
+
+The first step is to define sequences of moves to move any two edges or any three corners to a pre-
+determined position. This is implemented as `fixEdges` and `fixCorners₃`. Constructing these
+algorithms is straightforward, albeit somewhat tedious.
+
+We then hardcode algorithms for performing the following four basic operations:
+
+- Swap two edges in a pre-determined position
+- Flip two edges in a pre-determined position
+- Permute three corners in a pre-determined position, without moving the edges
+- Rotate two corners in a pre-determined position, without moving the edges
+
+Through the use of [conjugates](https://ruwix.com/the-rubiks-cube/commutators-conjugates), we are
+able to generalize these algorithms to any edges or corners. We can then chain these together,
+solving one piece at a time until we're done.
+
+The Rubik's cube invariant comes into play at the following points:
+
+- To ensure all the edges are in the correct orientation, we require the `edgeFlip` invariant
+- To ensure all edges and corners are in the correct position, we require the `parity` invariant
+- To ensure all corners are in the correct orientation, we require the `cornerRotation` invariant
+-/
+
 open Orientation PRubik
 
+private theorem List.length_filter_lt {α : Type*} (a : α) (l : List α) (p : α → Bool) :
+    (l.filter p).length < (a :: l).length :=
+  (List.length_filter_le _ _).trans_lt (Nat.lt_succ_self _)
 
 namespace Moves
 set_option maxRecDepth 1500
@@ -296,11 +331,11 @@ private def solveEdgesAux (cube : Rubik) : List Edge → Moves
     let cube' := cube * move m
     m ++ solveEdgesAux cube' (l.filter fun e ↦ edgeEquiv cube' e ≠ e)
 termination_by l => l.length
-decreasing_by exact (List.length_filter_le _ _).trans_lt (Nat.lt_succ_self _)
+decreasing_by exact List.length_filter_lt _ _ _
 
 private theorem solveEdgesAux_edgeEquiv (cube : Rubik) (l : List Edge)
     (he : ∀ e, e ∈ l ↔ edgeEquiv cube e ≠ e) :
-    edgeEquiv (PRubik.move (solveEdgesAux cube l)) = (edgeEquiv cube)⁻¹ :=
+    edgeEquiv (PRubik.move (solveEdgesAux cube l)) = edgeEquiv cube⁻¹ :=
   match l with
   | [] => by simpa [solveEdgesAux, Equiv.ext_iff] using he
   | a::l => by
@@ -318,7 +353,7 @@ private theorem solveEdgesAux_edgeEquiv (cube : Rubik) (l : List Edge)
         · rw [Equiv.swap_apply_of_ne_of_ne he₁ he₂] at ha
           exact (List.mem_cons.1 ((he _).2 ha)).resolve_left he₁
 termination_by l.length
-decreasing_by exact (List.length_filter_le _ _).trans_lt (Nat.lt_succ_self _)
+decreasing_by exact List.length_filter_lt _ _ _
 
 /-- A sequence of moves that puts the cube's edges in their correct position. -/
 def solveEdges (cube : Rubik) : Moves :=
@@ -326,7 +361,7 @@ def solveEdges (cube : Rubik) : Moves :=
 
 @[simp]
 theorem solveEdges_edgeEquiv (cube : Rubik) :
-    edgeEquiv (PRubik.move (solveEdges cube)) = (edgeEquiv cube)⁻¹ := by
+    edgeEquiv (PRubik.move (solveEdges cube)) = edgeEquiv cube⁻¹ := by
   apply solveEdgesAux_edgeEquiv
   simp
 
@@ -336,17 +371,15 @@ private def solveEdgePiecesAux : List Edge → Moves
   | a::b::l => Moves.flipEdges a b ++ solveEdgePiecesAux l
   | _ => []
 
-private theorem one_ne_neg_one : (1 : ℤˣ) ≠ -1 := by decide
-
 theorem solveEdgePiecesAux_edgePieceEquiv (cube : Rubik) (hc : edgeEquiv cube = 1)
     (l : List Edge) (hl : l.Nodup) (he : ∀ e, ⟦e⟧ ∈ l ↔ edgePieceEquiv cube e ≠ e) :
-    edgePieceEquiv (PRubik.move (solveEdgePiecesAux l)) = (edgePieceEquiv cube)⁻¹ :=
+    edgePieceEquiv (PRubik.move (solveEdgePiecesAux l)) = edgePieceEquiv cube⁻¹ :=
   have hc' (e) : cube.1.edgePieceEquiv e = e ∨ cube.1.edgePieceEquiv e = e.flip :=
     EdgePiece.equiv_iff.1 <| Quotient.exact <| Equiv.ext_iff.1 hc ⟦e⟧
   match l with
   | [] => by simpa [solveEdgePiecesAux, Equiv.ext_iff] using he
   | [a] => by
-    apply (one_ne_neg_one _).elim
+    apply (units_ne_neg_self (1 : ℤˣ) _).elim
     conv_lhs => rw [← (Rubik.isValid cube).edgeFlip, edgeFlip, MonoidHom.coe_comp,
       Function.comp_apply, edgePieceEquivHom_apply]
     suffices edgePieceEquiv cube = a.flipEquiv by
@@ -395,7 +428,7 @@ def solveEdgePieces (cube : Rubik) : Moves := by
 
 @[simp]
 theorem solveEdgePieces_edgePieceEquiv (cube : Rubik) (hc : PRubik.edgeEquiv cube = 1) :
-    edgePieceEquiv (PRubik.move (solveEdgePieces cube)) = (edgePieceEquiv cube)⁻¹ := by
+    edgePieceEquiv (PRubik.move (solveEdgePieces cube)) = edgePieceEquiv cube⁻¹ := by
   apply solveEdgePiecesAux_edgePieceEquiv _ hc _ (Finset.sort_nodup _ _)
   simp [edgeEquiv_mk]
 
@@ -411,36 +444,28 @@ private def solveCornersAux (cube : Rubik) : List Corner → Moves
     let m := Moves.cycleCorners a x (other b c x)
     let cube' := cube * move m
     m ++ solveCornersAux cube' ((b::c::l).filter fun e ↦ cornerEquiv cube' e ≠ e)
-  | [] | [_] | [_, _] => []
+  | _ => []
 termination_by l => l.length
-decreasing_by exact (List.length_filter_le _ _).trans_lt (Nat.lt_succ_self _)
+decreasing_by exact List.length_filter_lt _ _ _
 
-private theorem solveCornersAux_edgePieceEquiv (cube : Rubik)
-    (he : edgePieceEquiv cube = 1) (l : List Corner) :
+private theorem solveCornersAux_edgePieceEquiv (cube : Rubik) (l : List Corner) :
     edgePieceEquiv (PRubik.move (solveCornersAux cube l)) = 1 :=
   match l with
   | a::b::c::l => by
     rw [solveCornersAux, PRubik.move_append, edgePieceEquiv_mul, Moves.edgePieceEquiv_cycleCorners,
       one_mul, solveCornersAux_edgePieceEquiv]
-    simpa
   | [] | [_] | [_, _] => by all_goals simp [solveCornersAux]
 termination_by l.length
-decreasing_by exact (List.length_filter_le _ _).trans_lt (Nat.lt_succ_self _)
+decreasing_by exact List.length_filter_lt _ _ _
 
 private theorem solveCornersAux_cornerEquiv (cube : Rubik) (he : edgePieceEquiv cube = 1)
     (l : List Corner) (hl : l.Nodup) (hc : ∀ c, c ∈ l ↔ cornerEquiv cube c ≠ c) :
-    cornerEquiv (PRubik.move (solveCornersAux cube l)) = (cornerEquiv cube)⁻¹ :=
+    cornerEquiv (PRubik.move (solveCornersAux cube l)) = cornerEquiv cube⁻¹ :=
   match l with
   | [] => by simpa [solveCornersAux, Equiv.ext_iff] using hc
-  | [a] => by
-    simp at hc
-    have ha := ((hc a).1 rfl)
-    apply (ha _).elim
-    have := hc ((cornerEquiv cube).symm a)
-    rw [Equiv.apply_symm_apply, Equiv.eq_symm_apply] at this
-    rw [← Equiv.eq_symm_apply, this.2 ha]
+  | [a] => by simp [Equiv.not_equiv_ne_iff] at hc
   | [a, b] => by
-    apply (one_ne_neg_one _).elim
+    apply (units_ne_neg_self (1 : ℤˣ) _).elim
     conv_lhs => rw [← (Rubik.isValid cube).parity, parity, MonoidHom.mul_apply, MonoidHom.coe_comp,
       Function.comp_apply, edgeEquiv_of_edgePieceEquiv_eq_one he]
     suffices cornerEquiv cube = Equiv.swap a b by simpa [this] using hl
@@ -492,19 +517,127 @@ private theorem solveCornersAux_cornerEquiv (cube : Rubik) (he : edgePieceEquiv 
           simpa [hxa, hxb, hxc] using hx
     · simpa
 termination_by l.length
-decreasing_by exact (List.length_filter_le _ _).trans_lt (Nat.lt_succ_self _)
+decreasing_by exact List.length_filter_lt _ _ _
 
 /-- A sequence of moves that puts the cube's corners in their correct position. -/
 def solveCorners (cube : Rubik) : Moves :=
   solveCornersAux cube ((Finset.univ.filter fun c ↦ cornerEquiv cube c ≠ c).sort (· ≤ ·))
 
-theorem solveCorners_edgePieceEquiv (cube : Rubik) (he : edgePieceEquiv cube = 1) :
+@[simp]
+theorem solveCorners_edgePieceEquiv (cube : Rubik) :
     edgePieceEquiv (PRubik.move (solveCorners cube)) = 1 :=
-  solveCornersAux_edgePieceEquiv _ he _
+  solveCornersAux_edgePieceEquiv _ _
 
 theorem solveCorners_cornerEquiv (cube : Rubik) (he : edgePieceEquiv cube = 1) :
-    cornerEquiv (PRubik.move (solveCorners cube)) = (cornerEquiv cube)⁻¹ := by
+    cornerEquiv (PRubik.move (solveCorners cube)) = cornerEquiv cube⁻¹ := by
   apply solveCornersAux_cornerEquiv _ he _ (Finset.sort_nodup _ _)
   simp
 
+/-- The number of **clockwise** turns required to solve a corner. -/
+private def value (cube : Rubik) (c : Corner) : ZMod 3 :=
+  c.lift (fun c ↦ c.value Axis.x - (cornerPieceEquiv cube c).value Axis.x) (by
+    intro c₁ c₂ h
+    obtain rfl | rfl | rfl := CornerPiece.equiv_iff.1 h <;> simp
+  )
+
+/-- A sequence of moves that puts the cube's corners in their correct orientation, in the specified
+order. -/
+private def solveCornerPiecesAux (cube : Rubik) : List Corner → Moves
+  | a::b::l =>
+    let m := if value cube a = 1 then Moves.rotateCorners a b else Moves.rotateCorners b a
+    let cube' := cube * move m
+    m ++ solveCornerPiecesAux cube' ((b::l).filter fun c ↦ value cube' c ≠ 0)
+  | _ => []
+termination_by l => l.length
+decreasing_by exact List.length_filter_lt _ _ _
+
+private theorem solveCornerPiecesAux_edgePieceEquiv (cube : Rubik) (l : List Corner) :
+    edgePieceEquiv (PRubik.move (solveCornerPiecesAux cube l)) = 1 :=
+  match l with
+  | a::b::l => by
+    rw [solveCornerPiecesAux, PRubik.move_append, edgePieceEquiv_mul,
+      solveCornerPiecesAux_edgePieceEquiv]
+    split_ifs <;> rw [Moves.edgePieceEquiv_rotateCorners, mul_one]
+  | [] | [_] => by simp [solveCornerPiecesAux]
+termination_by l.length
+decreasing_by all_goals exact List.length_filter_lt _ _ _
+
+private theorem solveCornerPiecesAux_cornerPieceEquiv (cube : Rubik) (l : List Corner)
+    (hl : l.Nodup) (he : cornerEquiv cube = 1) (hc : ∀ c, c ∈ l ↔ value cube c ≠ 0) :
+    cornerPieceEquiv (PRubik.move (solveCornerPiecesAux cube l)) = cornerPieceEquiv cube⁻¹ :=
+  have hc' : (∀ c, value cube c = 0) → cornerPieceEquiv cube = 1 := sorry
+  match l with
+  | [] => by
+    simp at hc
+    simp [solveCornerPiecesAux]
+    ext c
+    have := hc ⟦c⟧
+    rw [value, Quotient.lift_mk, sub_eq_zero] at this
+  | [a] => by
+    sorry
+  | a::b::l => sorry
+
+#exit
+/-- A sequence of moves that puts the cube's corners in their correct orientation. -/
+def solveCornerPieces (cube : Rubik) : Moves :=
+  solveCornerPiecesAux cube ((Finset.univ.filter fun c ↦ value cube c ≠ 0).sort (· ≤ ·))
+
+@[simp]
+theorem solveCornerPieces_edgePieceEquiv (cube : Rubik) :
+    edgePieceEquiv (PRubik.move (solveCornerPieces cube)) = 1 :=
+  solveCornerPiecesAux_edgePieceEquiv _ _
+
+theorem solveCornerPieces_cornerPieceEquiv (cube : Rubik) (he : cornerEquiv cube = 1) :
+    cornerPieceEquiv (PRubik.move (solveCornerPieces cube)) = cornerPieceEquiv cube⁻¹ := by
+  apply solveCornerPiecesAux_cornerPieceEquiv _ _ (Finset.sort_nodup _ _) he
+  simp
+
+/-- A sequence of moves that solves a Rubik's cube, i.e. unscrambles it.
+
+This algorithm does not optimize for length, and in fact, it will often contain large chains of
+duplicate moves. The `repr` instance on `Moves` will hide these from the infoview, but you can also
+call `Moves.deduplicate` to explicitly get rid of this redundancy.
+
+See the module docstring for details on the algorithm. -/
+def solve (c0 : Rubik) : Moves :=
+  let s1 := solveEdges c0
+  let c1 := c0 * move s1
+  let s2 := solveEdgePieces c1
+  let c2 := c1 * move s2
+  let s3 := solveCorners c2
+  let c3 := c2 * move s3
+  let s4 := solveCornerPieces c3
+  s1 ++ s2 ++ s3 ++ s4
+
+@[simp]
+theorem move_solve (cube : Rubik) : move (solve cube) = cube⁻¹ := by
+  ext x
+  · simp [solve]
+  · simp_rw [solve, move_append, Subgroup.coe_mul, val_move, cornerPieceEquiv_mul]
+    rw [solveCornerPieces_cornerPieceEquiv]
+    · simp
+    · rw [Subgroup.coe_mul, val_move, map_mul, solveCorners_cornerEquiv] <;> simp [mul_assoc]
+
+theorem isSolvable (cube : Rubik) : IsSolvable cube := by
+  rw [← isSolvable_inv_iff]
+  exact ⟨_, congr_arg Subtype.val (move_solve cube)⟩
+
 end Rubik
+
+namespace PRubik
+
+/-- A valid cube is solvable, i.e. the invariant is a necessary and sufficient condition for
+solvability. -/
+theorem IsValid.isSolvable (h : IsValid cube) : IsSolvable cube :=
+  Rubik.isSolvable ⟨_, h⟩
+
+/-- A Rubik's cube is solvable iff it satisfies the invariant. -/
+theorem isValid_iff_isSolvable : IsValid cube ↔ IsSolvable cube :=
+  ⟨IsValid.isSolvable, IsSolvable.isValid⟩
+
+instance : DecidablePred IsSolvable :=
+  fun _ ↦ decidable_of_iff _ isValid_iff_isSolvable
+
+end PRubik
+
+open Orientation
