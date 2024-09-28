@@ -13,7 +13,7 @@ open Orientation Batteries
 
 -- This is required in order to work with these large lists. See https://leanprover.zulipchat.com/#narrow/stream/348111-batteries/topic/Large.20vector.20hangs/near/473234634
 --
--- This code is due to Mario in that same thread.
+-- This code is due to Mario Carneiro in that same thread.
 open Lean
 macro_rules
   | `([ $elems,* ]) => do
@@ -206,21 +206,15 @@ end Stickers
 
 namespace PRubik
 
-/-- A list with all non-equivalent edges. -/
-private def Edges : Vector EdgePiece 12 :=
-  #v[EdgePiece.mk' U B, EdgePiece.mk' U L, EdgePiece.mk' U R, EdgePiece.mk' U F,
-    EdgePiece.mk' L B, EdgePiece.mk' L F, EdgePiece.mk' F R, EdgePiece.mk' R B,
-    EdgePiece.mk' D B, EdgePiece.mk' D L, EdgePiece.mk' D R, EdgePiece.mk' D F]
-
-/-- A list with all non-equivalent corners. -/
-private def Corners : Vector CornerPiece 8 :=
-  #v[CornerPiece.mk' U B L, CornerPiece.mk' U R B, CornerPiece.mk' U L F, CornerPiece.mk' U F R,
-    CornerPiece.mk' D L B, CornerPiece.mk' D B R, CornerPiece.mk' D F L, CornerPiece.mk' D R F]
-
 /-- Returns the list of stickers in a Rubik's cube. -/
 def toStickers (cube : PRubik) : Stickers :=
-  let e := Edges.map cube.edgePieceEquiv
-  let c := Corners.map cube.cornerPieceEquiv
+  let e := #v[EdgePiece.mk' U B, EdgePiece.mk' U L, EdgePiece.mk' U R, EdgePiece.mk' U F,
+    EdgePiece.mk' L B, EdgePiece.mk' L F, EdgePiece.mk' F R, EdgePiece.mk' R B,
+    EdgePiece.mk' D B, EdgePiece.mk' D L, EdgePiece.mk' D R, EdgePiece.mk' D F].map
+    cube.edgePieceEquiv
+  let c := #v[CornerPiece.mk' U B L, CornerPiece.mk' U R B, CornerPiece.mk' U L F,
+    CornerPiece.mk' U F R, CornerPiece.mk' D L B, CornerPiece.mk' D B R,
+    CornerPiece.mk' D F L, CornerPiece.mk' D R F].map cube.cornerPieceEquiv
   -- rfl, and by extension vector notation, doesn't seem to work with this.
   ⟨#[
     c[0].fst, e[0].fst, c[1].fst,
@@ -282,6 +276,7 @@ theorem isProper_toStickers (cube : PRubik) : cube.toStickers.IsProper := by
   rw [edgePieces_toStickers, cornerPieces_toStickers]
   simp [Equiv.surjective]
 
+@[simp]
 theorem toStickers_toPRubik (cube : PRubik) :
     cube.toStickers.toPRubik (isProper_toStickers cube) = cube := by
   ext
@@ -290,6 +285,7 @@ theorem toStickers_toPRubik (cube : PRubik) :
 
 end PRubik
 
+@[simp]
 theorem Stickers.toPRubik_toStickers (l : Stickers) (h : l.IsProper) :
     (l.toPRubik h).toStickers = l := by
   apply Vector.ext
@@ -312,6 +308,7 @@ theorem isAdjacent_toStickers (cube : Rubik) : (toStickers cube).IsAdjacent :=
 theorem isProper_toStickers (cube : Rubik) : (toStickers cube).IsProper :=
   cube.1.isProper_toStickers
 
+@[simp]
 theorem toStickers_toRubik (cube : Rubik) :
     (toStickers cube).toRubik (isProper_toStickers _) (by
       simp_rw [toStickers, PRubik.toStickers_toPRubik]
@@ -321,9 +318,9 @@ theorem toStickers_toRubik (cube : Rubik) :
 
 end Rubik
 
+@[simp]
 theorem Stickers.toRubik_toStickers (l : Stickers) (h : l.IsProper)
-    (hc : PRubik.IsValid (toPRubik l h) := by decide) :
-    Rubik.toStickers (l.toRubik h hc) = l :=
+    (hc : PRubik.IsValid (toPRubik l h) := by decide) : Rubik.toStickers (l.toRubik h hc) = l :=
   l.toPRubik_toStickers h
 
 /-
