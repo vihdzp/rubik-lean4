@@ -209,6 +209,7 @@ private def Corners : Vector CornerPiece 8 :=
   #v[CornerPiece.mk' U B L, CornerPiece.mk' U R B, CornerPiece.mk' U L F, CornerPiece.mk' U F R,
     CornerPiece.mk' D L B, CornerPiece.mk' D B R, CornerPiece.mk' D F L, CornerPiece.mk' D R F]
 
+/-- Returns the list of stickers in a Rubik's cube. -/
 def toStickers (cube : PRubik) : Stickers :=
   let e := Edges.map cube.edgePieceEquiv
   let c := Corners.map cube.cornerPieceEquiv
@@ -330,6 +331,7 @@ end PRubik
 
 namespace Rubik
 
+/-- Returns the list of stickers in a Rubik's cube. -/
 def toStickers (cube : Rubik) : Stickers :=
   cube.1.toStickers
 
@@ -343,3 +345,14 @@ instance : Repr Rubik :=
   ⟨fun c ↦ reprPrec c.1⟩
 
 end Rubik
+
+/-
+-- Example: the superflip position
+#eval Stickers.toRubik #v[
+  U, B, U, L, R, U, F, U,
+  L, U, L, B, F, L, D, L,
+  F, U, F, L, R, F, D, F,
+  R, U, R, F, B, R, D, R,
+  D, F, D, L, R, D, B, D,
+  B, D, B, L, R, B, U, B]
+-/
