@@ -464,6 +464,9 @@ theorem value_cyclic (c : CornerPiece) (a : Axis) : c.cyclic.value a = c.value a
     rw [c.isAdjacent₃.eq_cross, axis_cross, Axis.other_eq_iff c.isAdjacent]
     exact ⟨Ne.symm h₂, Ne.symm h₁⟩
 
+theorem value_cyclic' (c : CornerPiece) (a : Axis) : c.value a = c.cyclic.value a - 1 :=
+  eq_sub_iff_add_eq.2 (value_cyclic c a).symm
+
 instance : Setoid CornerPiece where
   r c₁ c₂ := c₁.toFinset = c₂.toFinset
   iseqv := by
@@ -506,8 +509,9 @@ theorem withAxis_eq_of_equiv {c₁ c₂ : CornerPiece} (h : c₁ ≈ c₂) (a : 
   · rw [withAxis_cyclic]
   · rw [withAxis_cyclic]
 
-theorem eq_of_value_eq {c₁ c₂ : CornerPiece} {a : Axis} (hc : c₁ ≈ c₂)
-    (h : c₁.value a = c₂.value a) : c₁ = c₂ := by
+theorem value_eq_iff_of_equiv {c₁ c₂ : CornerPiece} {a : Axis} (hc : c₁ ≈ c₂)
+    : c₁.value a = c₂.value a ↔ c₁ = c₂ := by
+  refine ⟨fun h ↦ ?_, fun h ↦ congr_arg (fun x ↦ x.value a) h⟩
   rw [equiv_iff] at hc
   obtain rfl | rfl | rfl := hc
   · rfl

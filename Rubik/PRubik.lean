@@ -279,6 +279,10 @@ def swapEdges (h : IsAdjacent a b) : PRubik where
     decide
   corner_cyclic _ := rfl
 
+@[simp]
+theorem parity_swapEdges : ∀ {a b} (h : IsAdjacent a b), parity (swapEdges h) = -1 := by
+  decide
+
 /-- The parity of flipped edges in a Rubik's cube can be measured as the parity of the edge piece
 permutation.
 
@@ -300,6 +304,10 @@ theorem edgePieceEquiv_flipEdge (e : Edge) : edgePieceEquiv (flipEdge e) = e.fli
 @[simp]
 theorem cornerPieceEquiv_flipEdge (e : Edge) : cornerPieceEquiv (flipEdge e) = 1 :=
   rfl
+
+@[simp]
+theorem edgeFlip_flipEdge : ∀ e, edgeFlip (flipEdge e) = -1 := by
+  decide
 
 theorem cornerPieceEquiv_value (cube : PRubik) (c : CornerPiece) (a : Axis) :
     (cube.cornerPieceEquiv c).value a =
@@ -352,6 +360,32 @@ def rotateCorner (c : Corner) : PRubik where
   cornerPieceEquiv := c.rotateEquiv
   edge_flip _ := rfl
   corner_cyclic := c.rotateEquiv_cyclic
+
+@[simp]
+theorem edgePieceEquiv_rotateCorner (c : Corner) : edgePieceEquiv (rotateCorner c) = 1 :=
+  rfl
+
+theorem cornerPieceEquiv_rotateCorner (c : Corner) :
+    cornerPieceEquiv (rotateCorner c) = c.rotateEquiv :=
+  rfl
+
+@[simp]
+theorem cornerPieceEquiv_rotateCorner_self (c : CornerPiece) :
+    cornerPieceEquiv (rotateCorner ⟦c⟧) c = c.cyclic := by
+  rw [cornerPieceEquiv_rotateCorner, Corner.rotateEquiv_mk, Equiv.cycle_fst]
+  · exact (CornerPiece.cyclic_ne _).symm
+  · exact CornerPiece.cyclic_cyclic_ne _
+
+@[simp]
+theorem cornerPieceEquiv_rotateCorner_self_inv (c : CornerPiece) :
+    (cornerPieceEquiv (rotateCorner ⟦c⟧))⁻¹ c = c.cyclic.cyclic := by
+  rw [Equiv.Perm.inv_def, Equiv.symm_apply_eq, ← Corner.mk_cyclic, ← Corner.mk_cyclic,
+    cornerPieceEquiv_rotateCorner_self, CornerPiece.cyclic₃]
+
+@[simp]
+theorem cornerRotation_rotateCorner :
+    ∀ c, cornerRotation (rotateCorner c) = Multiplicative.ofAdd 1 := by
+  decide
 
 /-- The **Rubik's cube invariant**. This is the combined `parity`, `edgeFlip`, and `cornerRotation`
 of a Rubik's cube.

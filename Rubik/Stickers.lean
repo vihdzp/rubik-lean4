@@ -1,5 +1,6 @@
 import Batteries.Data.Vector.Lemmas
 import Mathlib.Tactic.FinCases
+import Mathlib.Tactic.IntervalCases
 import Rubik.Move
 
 /-!
@@ -37,9 +38,6 @@ attribute [reducible] Array.mapM.map
 theorem getElem_map {α β : Type*} (f : α → β) {n : ℕ} (v : Vector α n) (i : Nat)
     (h : i < (v.map f).size) : (v.map f)[i] = f v[i] :=
   Array.getElem_map f _ _ _
-
--- This is a computationally heavy file.
-set_option maxHeartbeats 1000000
 
 /-- The list of stickers in a Rubik's cube. These should be given in the following order:
 
@@ -145,9 +143,8 @@ def cornerOrientations (l : Stickers) : CornerPiece → Orientation × Orientati
   | .mk (false, Axis.z) (true, Axis.x)  _ _ => (l[42], l[31], l[39])
   | .mk (false, Axis.z) (true, Axis.y)  _ _ => (l[47], l[2],  l[26])
 
-/-- A predicate for the property that the pieces represented by the stickers all satisfy their
-relevant adjacency properties, i.e. the pieces are the ones you'd actually encounter in a Rubik's
-cube. -/
+/-- The individual corner and edge pieces are all valid, i.e. their colors satisfy the required
+adjacency property. -/
 def IsAdjacent (l : Stickers) : Prop :=
   (∀ e : EdgePiece, let x := edgeOrientations l e; Orientation.IsAdjacent x.1 x.2) ∧
   (∀ c : CornerPiece, let x := cornerOrientations l c; Orientation.IsAdjacent₃ x.1 x.2.1 x.2.2)
@@ -166,13 +163,18 @@ def edgePieces (l : Stickers) (h : IsAdjacent l) (e : EdgePiece) : EdgePiece :=
 def cornerPieces (l : Stickers) (h : IsAdjacent l) (c : CornerPiece) : CornerPiece :=
   let x := cornerOrientations l c; ⟨x.1, x.2.1, x.2.2, h.2 _⟩
 
-/-- The list of stickers represents those for a `PRubik`. -/
+theorem edgePieces_flip {l : Stickers} (h : IsAdjacent l) (e : EdgePiece) :
+    (edgePieces l h e.flip) = (edgePieces l h e).flip := by
+  fin_cases e <;> rfl
+
+theorem cornerPieces_cyclic {l : Stickers} (h : IsAdjacent l) (c : CornerPiece) :
+    (cornerPieces l h c.cyclic) = (cornerPieces l h c).cyclic := by
+  fin_cases c <;> rfl
+
+/-- The stickers represent those for a pre-Rubik's cube, i.e. they are `IsAdjacent`, and there are
+no duplicate pieces. -/
 def IsProper (l : Stickers) : Prop :=
-  ∃ h : IsAdjacent l,
-    Function.Surjective (edgePieces l h) ∧
-    Function.Surjective (cornerPieces l h) ∧
-    (∀ e, edgePieces l h e.flip = (edgePieces l h e).flip) ∧
-    (∀ c, cornerPieces l h c.cyclic = (cornerPieces l h c).cyclic)
+  ∃ h : IsAdjacent l, Function.Surjective (edgePieces l h) ∧ Function.Surjective (cornerPieces l h)
 
 theorem IsProper.isAdjacent (h : IsProper l) : IsAdjacent l := by
   obtain ⟨h, _⟩ := h
@@ -190,8 +192,9 @@ def toPRubik (l : Stickers) (h : IsProper l := by decide) : PRubik := by
     ⟨⟨edgePieces l ?_, Fintype.bijInv ?_,
       Fintype.leftInverse_bijInv _, Fintype.rightInverse_bijInv _⟩,
     ⟨cornerPieces l ?_, Fintype.bijInv ?_,
-      Fintype.leftInverse_bijInv _, Fintype.rightInverse_bijInv _⟩, ?_, ?_⟩ <;>
-  obtain ⟨_, _, _, _, _⟩ := h
+      Fintype.leftInverse_bijInv _, Fintype.rightInverse_bijInv _⟩,
+      edgePieces_flip h.isAdjacent, cornerPieces_cyclic h.isAdjacent⟩ <;>
+  obtain ⟨h, _, _⟩ := h
   assumption'
   all_goals
     refine (Fintype.bijective_iff_surjective_and_card _).2 ⟨?_, rfl⟩
@@ -240,6 +243,7 @@ instance : Repr PRubik :=
   ⟨fun c ↦ reprPrec c.toStickers⟩
 
 -- For some reason, this is excruciatingly slow.
+set_option maxHeartbeats 1000000 in
 theorem edgeOrientations_toStickers (cube : PRubik) : cube.toStickers.edgeOrientations =
     fun e ↦ let x := cube.edgePieceEquiv e; (x.1, x.2) := by
   apply funext
@@ -290,8 +294,7 @@ theorem Stickers.toPRubik_toStickers (l : Stickers) (h : l.IsProper) :
     (l.toPRubik h).toStickers = l := by
   apply Vector.ext
   intro i hi
-  rw [← List.mem_range] at hi
-  fin_cases hi <;> rfl
+  interval_cases i <;> rfl
 
 namespace Rubik
 
