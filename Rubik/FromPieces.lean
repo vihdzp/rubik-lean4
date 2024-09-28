@@ -233,57 +233,95 @@ def toStickers (cube : PRubik) : Stickers :=
     e[4].snd,           e[7].snd,
     c[0].snd, e[0].snd, c[1].thd], by simp⟩
 
-theorem edge_flip' (cube : PRubik) (e : EdgePiece) :
-    cube.edgePieceEquiv e = (cube.edgePieceEquiv e.flip).flip :=
-  cube.edge_flip e.flip
-
 set_option allowUnsafeReducibility true
 attribute [reducible] Array.mapM.map
 
+-- It's somewhat faster to fill in each goal explicitly, rather than first trying `rfl` on
+-- everything.
 set_option maxHeartbeats 500000 in
-theorem edgeOrientations_toStickers (cube : PRubik) :
-    (toStickers cube).edgeOrientations = fun e ↦ let x := cube.edgePieceEquiv e; (x.1, x.2) := by
+theorem edgeOrientations_toStickers (cube : PRubik) : cube.toStickers.edgeOrientations =
+    fun e ↦ let x := cube.edgePieceEquiv e; (x.1, x.2) := by
   apply funext
   intro e
   match e with
-  | .mk (true, Axis.y)  (false, Axis.z) _
-  | .mk (true, Axis.y)  (false, Axis.x) _
-  | .mk (true, Axis.y)  (true, Axis.x)  _
-  | .mk (true, Axis.y)  (true, Axis.z)  _
-  | .mk (false, Axis.x) (true, Axis.y)  _
-  | .mk (false, Axis.x) (false, Axis.z) _
-  | .mk (false, Axis.x) (true, Axis.z)  _
-  | .mk (false, Axis.x) (false, Axis.y) _
-  | .mk (true, Axis.z)  (true, Axis.y)  _
-  | .mk (true, Axis.z)  (false, Axis.x) _
-  | .mk (true, Axis.z)  (true, Axis.x)  _
-  | .mk (true, Axis.z)  (false, Axis.y) _
-  | .mk (true, Axis.x)  (true, Axis.y)  _
-  | .mk (true, Axis.x)  (true, Axis.z)  _
-  | .mk (true, Axis.x)  (false, Axis.z) _
-  | .mk (true, Axis.x)  (false, Axis.y) _
-  | .mk (false, Axis.y) (true, Axis.z)  _
-  | .mk (false, Axis.y) (false, Axis.x) _
-  | .mk (false, Axis.y) (true, Axis.x)  _
-  | .mk (false, Axis.y) (false, Axis.z) _
-  | .mk (false, Axis.z) (false, Axis.y) _
-  | .mk (false, Axis.z) (false, Axis.x) _
-  | .mk (false, Axis.z) (true, Axis.x)  _
-  | .mk (false, Axis.z) (true, Axis.y)  _ => first | rfl | rw [edge_flip']; rfl
-
-
-  /-| .mk (false, Axis.x) (false, Axis.z) _ => rfl
+  | .mk (true, Axis.y)  (false, Axis.z) _ => rfl
+  | .mk (true, Axis.y)  (false, Axis.x) _ => rfl
+  | .mk (true, Axis.y)  (true, Axis.x)  _ => rfl
+  | .mk (true, Axis.y)  (true, Axis.z)  _ => rfl
+  | .mk (false, Axis.x) (true, Axis.y)  _ => rw [edge_flip']; rfl
+  | .mk (false, Axis.x) (false, Axis.z) _ => rfl
   | .mk (false, Axis.x) (true, Axis.z)  _ => rfl
-  | .mk (false, Axis.x) (false, Axis.y) _ => rfl-/
+  | .mk (false, Axis.x) (false, Axis.y) _ => rw [edge_flip']; rfl
+  | .mk (true, Axis.z)  (true, Axis.y)  _ => rw [edge_flip']; rfl
+  | .mk (true, Axis.z)  (false, Axis.x) _ => rw [edge_flip']; rfl
+  | .mk (true, Axis.z)  (true, Axis.x)  _ => rfl
+  | .mk (true, Axis.z)  (false, Axis.y) _ => rw [edge_flip']; rfl
+  | .mk (true, Axis.x)  (true, Axis.y)  _ => rw [edge_flip']; rfl
+  | .mk (true, Axis.x)  (true, Axis.z)  _ => rw [edge_flip']; rfl
+  | .mk (true, Axis.x)  (false, Axis.z) _ => rfl
+  | .mk (true, Axis.x)  (false, Axis.y) _ => rw [edge_flip']; rfl
+  | .mk (false, Axis.y) (true, Axis.z)  _ => rfl
+  | .mk (false, Axis.y) (false, Axis.x) _ => rfl
+  | .mk (false, Axis.y) (true, Axis.x)  _ => rfl
+  | .mk (false, Axis.y) (false, Axis.z) _ => rfl
+  | .mk (false, Axis.z) (false, Axis.y) _ => rw [edge_flip']; rfl
+  | .mk (false, Axis.z) (false, Axis.x) _ => rw [edge_flip']; rfl
+  | .mk (false, Axis.z) (true, Axis.x)  _ => rw [edge_flip']; rfl
+  | .mk (false, Axis.z) (true, Axis.y)  _ => rw [edge_flip']; rfl
 
+-- It's somewhat faster to fill in each goal explicitly, rather than first trying `rfl` on
+-- everything.
+theorem cornerOrientations_toStickers (cube : PRubik) : cube.toStickers.cornerOrientations =
+    fun c ↦ let x := cube.cornerPieceEquiv c; (x.1, x.2, x.3) := by
+  apply funext
+  intro c
+  match c with
+  | .mk (true, Axis.y)  (false, Axis.z) (false, Axis.x) _ => rfl
+  | .mk (true, Axis.y)  (false, Axis.x) (true, Axis.z)  _ => rfl
+  | .mk (true, Axis.y)  (true, Axis.x)  (false, Axis.z) _ => rfl
+  | .mk (true, Axis.y)  (true, Axis.z)  (true, Axis.x)  _ => rfl
+  | .mk (false, Axis.x) (true, Axis.y)  (false, Axis.z) _ => rw [corner_cyclic']; rfl
+  | .mk (false, Axis.x) (false, Axis.z) (false, Axis.y) _ => rw [corner_cyclic'']; rfl
+  | .mk (false, Axis.x) (true, Axis.z)  (true, Axis.y)  _ => rw [corner_cyclic'']; rfl
+  | .mk (false, Axis.x) (false, Axis.y) (true, Axis.z)  _ => rw [corner_cyclic']; rfl
+  | .mk (true, Axis.z)  (true, Axis.y)  (false, Axis.x) _ => rw [corner_cyclic']; rfl
+  | .mk (true, Axis.z)  (false, Axis.x) (false, Axis.y) _ => rw [corner_cyclic'']; rfl
+  | .mk (true, Axis.z)  (true, Axis.x)  (true, Axis.y)  _ => rw [corner_cyclic'']; rfl
+  | .mk (true, Axis.z)  (false, Axis.y) (true, Axis.x)  _ => rw [corner_cyclic']; rfl
+  | .mk (true, Axis.x)  (true, Axis.y)  (true, Axis.z)  _ => rw [corner_cyclic']; rfl
+  | .mk (true, Axis.x)  (true, Axis.z)  (false, Axis.y) _ => rw [corner_cyclic'']; rfl
+  | .mk (true, Axis.x)  (false, Axis.z) (true, Axis.y)  _ => rw [corner_cyclic'']; rfl
+  | .mk (true, Axis.x)  (false, Axis.y) (false, Axis.z) _ => rw [corner_cyclic']; rfl
+  | .mk (false, Axis.y) (true, Axis.z)  (false, Axis.x) _ => rfl
+  | .mk (false, Axis.y) (false, Axis.x) (false, Axis.z) _ => rfl
+  | .mk (false, Axis.y) (true, Axis.x)  (true, Axis.z)  _ => rfl
+  | .mk (false, Axis.y) (false, Axis.z) (true, Axis.x)  _ => rfl
+  | .mk (false, Axis.z) (false, Axis.y) (false, Axis.x) _ => rw [corner_cyclic']; rfl
+  | .mk (false, Axis.z) (false, Axis.x) (true, Axis.y)  _ => rw [corner_cyclic'']; rfl
+  | .mk (false, Axis.z) (true, Axis.x)  (false, Axis.y) _ => rw [corner_cyclic'']; rfl
+  | .mk (false, Axis.z) (true, Axis.y)  (true, Axis.x)  _ => rw [corner_cyclic']; rfl
 
-    #exit
+theorem isAdjacent_toStickers (cube : PRubik) : cube.toStickers.IsAdjacent := by
+  constructor
+  · rw [edgeOrientations_toStickers]
+    exact fun _ ↦ EdgePiece.isAdjacent _
+  · rw [cornerOrientations_toStickers]
+    exact fun _ ↦ CornerPiece.isAdjacent₃ _
 
-theorem toStickers_isAdjacent (cube : PRubik) : cube.toStickers.IsAdjacent :=
-  sorry
+theorem edgePieces_toStickers (cube : PRubik) :
+    cube.toStickers.edgePieces (isAdjacent_toStickers _) = cube.edgePieceEquiv := by
+  ext e
+  simp_rw [Stickers.edgePieces, edgeOrientations_toStickers]
 
-theorem toStickers_isProper (cube : PRubik) : cube.toStickers.IsProper :=
-  sorry
+theorem cornerPieces_toStickers (cube : PRubik) :
+    cube.toStickers.cornerPieces (isAdjacent_toStickers _) = cube.cornerPieceEquiv := by
+  ext c
+  simp_rw [Stickers.cornerPieces, cornerOrientations_toStickers]
+
+theorem isProper_toStickers (cube : PRubik) : cube.toStickers.IsProper := by
+  use cube.isAdjacent_toStickers
+  rw [edgePieces_toStickers, cornerPieces_toStickers]
+  simp [Equiv.surjective]
 
 instance : Repr PRubik :=
   ⟨fun c ↦ reprPrec c.toStickers⟩
@@ -295,8 +333,11 @@ namespace Rubik
 def toStickers (cube : Rubik) : Stickers :=
   cube.1.toStickers
 
-theorem toStickers_isProper (cube : Rubik) : (toStickers cube).IsProper :=
-  cube.1.toStickers_isProper
+theorem isAdjacent_toStickers (cube : Rubik) : (toStickers cube).IsAdjacent :=
+  cube.1.isAdjacent_toStickers
+
+theorem isProper_toStickers (cube : Rubik) : (toStickers cube).IsProper :=
+  cube.1.isProper_toStickers
 
 instance : Repr Rubik :=
   ⟨fun c ↦ reprPrec c.1⟩

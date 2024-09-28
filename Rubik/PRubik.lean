@@ -36,6 +36,18 @@ namespace PRubik
 
 deriving instance Fintype for PRubik
 
+theorem edge_flip' (cube : PRubik) (e : EdgePiece) :
+    cube.edgePieceEquiv e = (cube.edgePieceEquiv e.flip).flip :=
+  cube.edge_flip e.flip
+
+theorem corner_cyclic' (cube : PRubik) (c : CornerPiece) :
+    cube.cornerPieceEquiv c = (cube.cornerPieceEquiv c.cyclic).cyclic.cyclic := by
+  rw [← CornerPiece.cyclic_inj, corner_cyclic, CornerPiece.cyclic₃]
+
+theorem corner_cyclic'' (cube : PRubik) (c : CornerPiece) :
+    cube.cornerPieceEquiv c = (cube.cornerPieceEquiv c.cyclic.cyclic).cyclic :=
+  cube.corner_cyclic c.cyclic.cyclic
+
 @[ext]
 theorem ext (cube₁ cube₂ : PRubik)
     (he : ∀ e, cube₁.edgePieceEquiv e = cube₂.edgePieceEquiv e)
