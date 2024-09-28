@@ -8,6 +8,7 @@ cube from only the sticker arrangements, automatically inferring all of the rele
 This is where we also implement the `Repr` instance on `PRubik` and `Rubik`.
 -/
 
+open Orientation Batteries
 
 -- This is required in order to work with these large lists. See https://leanprover.zulipchat.com/#narrow/stream/348111-batteries/topic/Large.20vector.20hangs/near/473234634
 --
@@ -23,7 +24,14 @@ macro_rules
     let size := elems.elemsAndSeps.size
     expandListLit size (size % 2 == 0) (← ``(List.nil))
 
-open Orientation
+-- Upstreamed from https://github.com/leanprover/lean4/pull/5446
+macro_rules
+  | `(#[ $elems,* ]) => `(Array.mk [ $elems,* ])
+
+@[simp]
+theorem getElem_map {α β : Type*} (f : α → β) {n : ℕ} (v : Vector α n) (i : Nat)
+    (h : i < (v.map f).size) : (v.map f)[i] = f v[i] :=
+  Array.getElem_map f _ _ _
 
 /-- The list of stickers in a Rubik's cube. These should be given in the following order:
 
@@ -42,12 +50,12 @@ open Orientation
          45 46 47
 ```
 -/
-def Stickers : Type := Batteries.Vector Orientation 48
+def Stickers : Type := Vector Orientation 48
 
 namespace Stickers
 
 instance : GetElem Stickers ℕ Orientation fun _ i => i < 48 :=
-  inferInstanceAs (GetElem (Batteries.Vector Orientation 48) _ _ _)
+  inferInstanceAs (GetElem (Vector Orientation 48) _ _ _)
 
 open Std.Format in
 instance : Repr Stickers := ⟨fun c _ ↦ let space := text "⬛⬛⬛"
@@ -92,10 +100,10 @@ def edgeOrientations (l : Stickers) : EdgePiece → Orientation × Orientation
   | .mk (true, Axis.x)  (true, Axis.y)  _ => (l[25], l[4])
   | .mk (true, Axis.x)  (true, Axis.z)  _ => (l[27], l[20])
   | .mk (true, Axis.x)  (false, Axis.z) _ => (l[28], l[44])
-  | .mk (true, Axis.x)  (false, Axis.y) _ => (l[30], l[33])
+  | .mk (true, Axis.x)  (false, Axis.y) _ => (l[30], l[36])
   | .mk (false, Axis.y) (true, Axis.z)  _ => (l[33], l[22])
   | .mk (false, Axis.y) (false, Axis.x) _ => (l[35], l[14])
-  | .mk (false, Axis.y) (true, Axis.x)  _ => (l[36], l[27])
+  | .mk (false, Axis.y) (true, Axis.x)  _ => (l[36], l[30])
   | .mk (false, Axis.y) (false, Axis.z) _ => (l[38], l[41])
   | .mk (false, Axis.z) (false, Axis.y) _ => (l[41], l[38])
   | .mk (false, Axis.z) (false, Axis.x) _ => (l[43], l[11])
@@ -191,24 +199,19 @@ end Stickers
 namespace PRubik
 
 /-- A list with all non-equivalent edges. -/
-private def Edges : List EdgePiece :=
-  [EdgePiece.mk' U B, EdgePiece.mk' U L, EdgePiece.mk' U R, EdgePiece.mk' U F,
+private def Edges : Vector EdgePiece 12 :=
+  #v[EdgePiece.mk' U B, EdgePiece.mk' U L, EdgePiece.mk' U R, EdgePiece.mk' U F,
     EdgePiece.mk' L B, EdgePiece.mk' L F, EdgePiece.mk' F R, EdgePiece.mk' R B,
     EdgePiece.mk' D B, EdgePiece.mk' D L, EdgePiece.mk' D R, EdgePiece.mk' D F]
 
 /-- A list with all non-equivalent corners. -/
-private def Corners : List CornerPiece :=
-  [CornerPiece.mk' U B L, CornerPiece.mk' U R B, CornerPiece.mk' U L F, CornerPiece.mk' U F R,
+private def Corners : Vector CornerPiece 8 :=
+  #v[CornerPiece.mk' U B L, CornerPiece.mk' U R B, CornerPiece.mk' U L F, CornerPiece.mk' U F R,
     CornerPiece.mk' D L B, CornerPiece.mk' D B R, CornerPiece.mk' D F L, CornerPiece.mk' D R F]
-
-example : Batteries.Vector ℕ 31 :=
-  #v[1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1]
 
 def toStickers (cube : PRubik) : Stickers :=
   let e := Edges.map cube.edgePieceEquiv
   let c := Corners.map cube.cornerPieceEquiv
-  have : e.length = 12 := rfl
-  have : c.length = 8 := rfl
   -- rfl, and by extension vector notation, doesn't seem to work with this.
   ⟨#[
     c[0].fst, e[0].fst, c[1].fst,
@@ -230,15 +233,51 @@ def toStickers (cube : PRubik) : Stickers :=
     e[4].snd,           e[7].snd,
     c[0].snd, e[0].snd, c[1].thd], by simp⟩
 
-/-theorem edgeOrientations_toStickers (cube : PRubik) :
+theorem edge_flip' (cube : PRubik) (e : EdgePiece) :
+    cube.edgePieceEquiv e = (cube.edgePieceEquiv e.flip).flip :=
+  cube.edge_flip e.flip
+
+set_option allowUnsafeReducibility true
+attribute [reducible] Array.mapM.map
+
+set_option maxHeartbeats 500000 in
+theorem edgeOrientations_toStickers (cube : PRubik) :
     (toStickers cube).edgeOrientations = fun e ↦ let x := cube.edgePieceEquiv e; (x.1, x.2) := by
   apply funext
   intro e
   match e with
-  | .mk (true, Axis.y)  (false, Axis.z) _ =>
-    rw [Stickers.edgeOrientations, toStickers]
-    change (List.map  cube.edgePieceEquiv PRubik.Edges)[0].fst = _ ∧ _
-    simp-/
+  | .mk (true, Axis.y)  (false, Axis.z) _
+  | .mk (true, Axis.y)  (false, Axis.x) _
+  | .mk (true, Axis.y)  (true, Axis.x)  _
+  | .mk (true, Axis.y)  (true, Axis.z)  _
+  | .mk (false, Axis.x) (true, Axis.y)  _
+  | .mk (false, Axis.x) (false, Axis.z) _
+  | .mk (false, Axis.x) (true, Axis.z)  _
+  | .mk (false, Axis.x) (false, Axis.y) _
+  | .mk (true, Axis.z)  (true, Axis.y)  _
+  | .mk (true, Axis.z)  (false, Axis.x) _
+  | .mk (true, Axis.z)  (true, Axis.x)  _
+  | .mk (true, Axis.z)  (false, Axis.y) _
+  | .mk (true, Axis.x)  (true, Axis.y)  _
+  | .mk (true, Axis.x)  (true, Axis.z)  _
+  | .mk (true, Axis.x)  (false, Axis.z) _
+  | .mk (true, Axis.x)  (false, Axis.y) _
+  | .mk (false, Axis.y) (true, Axis.z)  _
+  | .mk (false, Axis.y) (false, Axis.x) _
+  | .mk (false, Axis.y) (true, Axis.x)  _
+  | .mk (false, Axis.y) (false, Axis.z) _
+  | .mk (false, Axis.z) (false, Axis.y) _
+  | .mk (false, Axis.z) (false, Axis.x) _
+  | .mk (false, Axis.z) (true, Axis.x)  _
+  | .mk (false, Axis.z) (true, Axis.y)  _ => first | rfl | rw [edge_flip']; rfl
+
+
+  /-| .mk (false, Axis.x) (false, Axis.z) _ => rfl
+  | .mk (false, Axis.x) (true, Axis.z)  _ => rfl
+  | .mk (false, Axis.x) (false, Axis.y) _ => rfl-/
+
+
+    #exit
 
 theorem toStickers_isAdjacent (cube : PRubik) : cube.toStickers.IsAdjacent :=
   sorry
@@ -263,5 +302,3 @@ instance : Repr Rubik :=
   ⟨fun c ↦ reprPrec c.1⟩
 
 end Rubik
-
-
