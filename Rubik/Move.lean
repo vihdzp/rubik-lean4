@@ -2,6 +2,14 @@ import Mathlib.Tactic.FinCases
 import Rubik.PRubik
 import Rubik.RunLength
 
+/-!
+We define the Rubik's cube corresponding to any given orientation. We use this to define
+`PRubik.move`, which applies any sequence of moves from the solved state.
+
+We also provide `Moves.deduplicate`, which can be used to remove "obvious redundancies" within a
+sequence of moves, in the form of a single face being turned four or more consecutive times.
+-/
+
 namespace PRubik
 
 /-- Applies a **counterclockwise** rotation to an edge piece. -/
