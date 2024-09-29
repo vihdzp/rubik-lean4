@@ -122,13 +122,13 @@ theorem cornerPieceEquiv_mul (cube₁ cube₂ : PRubik) :
 theorem edge_flip_inv (cube : PRubik) (e : EdgePiece) :
     cube.edgePieceEquiv⁻¹ e.flip = (cube.edgePieceEquiv⁻¹ e).flip := by
   conv_rhs => rw [← cube.edgePieceEquiv.inv_apply_self (EdgePiece.flip _)]
-  rw [cube.edge_flip, Equiv.Perm.apply_inv_self]
+  rw [cube.edge_flip, Perm.apply_inv_self]
 
 @[simp]
 theorem corner_cyclic_inv (cube : PRubik) (c : CornerPiece) :
     cube.cornerPieceEquiv⁻¹ c.cyclic = (cube.cornerPieceEquiv⁻¹ c).cyclic := by
   conv_rhs => rw [← cube.cornerPieceEquiv.inv_apply_self (CornerPiece.cyclic _)]
-  rw [cube.corner_cyclic, Equiv.Perm.apply_inv_self]
+  rw [cube.corner_cyclic, Perm.apply_inv_self]
 
 theorem edgePieceEquiv_equiv (cube : PRubik) {e₁ e₂ : EdgePiece} (h : e₁ ≈ e₂) :
     cube.edgePieceEquiv e₁ ≈ cube.edgePieceEquiv e₂ := by
@@ -200,10 +200,10 @@ def edgeEquiv : PRubik →* Perm Edge where
         exact EdgePiece.flip_equiv _
     · refine Quotient.inductionOn e ?_
       intro
-      simp_rw [Quotient.lift_mk, Equiv.Perm.inv_apply_self]
+      simp_rw [Quotient.lift_mk, Perm.inv_apply_self]
     · refine Quotient.inductionOn e ?_
       intro
-      simp_rw [Quotient.lift_mk, Equiv.Perm.apply_inv_self]
+      simp_rw [Quotient.lift_mk, Perm.apply_inv_self]
   map_one' := by
     ext e
     refine Quotient.inductionOn e ?_
@@ -248,10 +248,10 @@ def cornerEquiv : PRubik →* Perm Corner where
         exact (CornerPiece.cyclic_equiv _).symm
     · refine Quotient.inductionOn c ?_
       intro
-      simp_rw [Quotient.lift_mk, Equiv.Perm.inv_apply_self]
+      simp_rw [Quotient.lift_mk, Perm.inv_apply_self]
     · refine Quotient.inductionOn c ?_
       intro
-      simp_rw [Quotient.lift_mk, Equiv.Perm.apply_inv_self]
+      simp_rw [Quotient.lift_mk, Perm.apply_inv_self]
   map_one' := by
     ext e
     refine Quotient.inductionOn e ?_
@@ -294,7 +294,7 @@ theorem edgeValue_eq_neg_one' {cube : PRubik} {e : EdgePiece} :
     edgeValue cube ⟦e⟧ = -1 ↔ cube.edgePieceEquiv e ≠ e := by
   simp [edgeValue_mk]
 
-theorem edgeValue_eq_neg_one {cube : PRubik} (he : edgeEquiv cube = 1) {e : EdgePiece} :
+theorem edgeValue_eq_neg_one (he : edgeEquiv cube = 1) {e : EdgePiece} :
     edgeValue cube ⟦e⟧ = -1 ↔ cube.edgePieceEquiv e = e.flip := by
   rw [edgeValue_eq_neg_one']
   refine ⟨fun h ↦ ?_, fun h ↦ h ▸ e.flip_ne⟩
@@ -303,6 +303,17 @@ theorem edgeValue_eq_neg_one {cube : PRubik} (he : edgeEquiv cube = 1) {e : Edge
   obtain he | he := this
   · contradiction
   · rw [he]
+
+theorem edgeValue_mul (he₁ : edgeEquiv cube₁ = 1) (he₂ : edgeEquiv cube₂ = 1) (e : Edge) :
+    edgeValue (cube₁ * cube₂) e = edgeValue cube₁ e * edgeValue cube₂ e := by
+  have he₃ : edgeEquiv (cube₁ * cube₂) = 1 := by rw [map_mul, he₁, he₂, one_mul]
+  refine e.inductionOn ?_
+  intro e
+  obtain h₁ | h₁ := Int.units_eq_one_or (edgeValue cube₁ ⟦e⟧) <;>
+  obtain h₂ | h₂ := Int.units_eq_one_or (edgeValue cube₂ ⟦e⟧) <;>
+  rw [h₁, h₂] <;>
+  simp only [edgeValue_eq_one, edgeValue_eq_neg_one he₁, edgeValue_eq_neg_one he₂] at h₁ h₂ <;>
+  simp [edgeValue_eq_one, edgeValue_eq_neg_one he₃, h₁, h₂]
 
 /-- In a Rubik's cube where all corners are in their correct position, the "corner value" of a
 corner represents the number of **counterclockwise** turns required to solve it. -/
@@ -316,26 +327,43 @@ theorem cornerValue_mk (cube : PRubik) (c : CornerPiece) :
     cornerValue cube ⟦c⟧ = (cornerPieceEquiv cube c).value Axis.x - c.value Axis.x :=
   rfl
 
-theorem cornerValue_eq_zero {cube : PRubik} (hc : cornerEquiv cube = 1) {c : CornerPiece} :
+theorem cornerValue_eq_zero (hc : cornerEquiv cube = 1) {c : CornerPiece} :
     cornerValue cube ⟦c⟧ = 0 ↔ cube.cornerPieceEquiv c = c := by
   rw [cornerValue_mk, sub_eq_zero, CornerPiece.value_eq_iff_of_equiv, eq_comm]
-  rw [← Quotient.eq, ← cornerEquiv_mk, hc, Equiv.Perm.one_apply]
+  rw [← Quotient.eq, ← cornerEquiv_mk, hc, Perm.one_apply]
 
-theorem cornerValue_eq_one {cube : PRubik} (hc : cornerEquiv cube = 1) {c : CornerPiece} :
+theorem cornerValue_eq_one (hc : cornerEquiv cube = 1) {c : CornerPiece} :
     cornerValue cube ⟦c⟧ = 1 ↔ cube.cornerPieceEquiv c = c.cyclic := by
   have : (1 + (1 + 1) : ZMod 3) = 0 := rfl
   rw [cornerValue_mk, CornerPiece.value_cyclic', CornerPiece.value_cyclic', sub_eq_iff_eq_add,
     add_comm, ← sub_eq_iff_eq_add, sub_sub, sub_sub, this, sub_zero,
     CornerPiece.value_eq_iff_of_equiv, ← CornerPiece.cyclic_inj, CornerPiece.cyclic₃]
-  rw [← Quotient.eq, Corner.mk_cyclic, Corner.mk_cyclic, ← cornerEquiv_mk, hc, Equiv.Perm.one_apply]
+  rw [← Quotient.eq, Corner.mk_cyclic, Corner.mk_cyclic, ← cornerEquiv_mk, hc, Perm.one_apply]
 
-theorem cornerValue_eq_two {cube : PRubik} (hc : cornerEquiv cube = 1) {c : CornerPiece} :
+theorem cornerValue_eq_two (hc : cornerEquiv cube = 1) {c : CornerPiece} :
     cornerValue cube ⟦c⟧ = 2 ↔ cube.cornerPieceEquiv c = c.cyclic.cyclic := by
   have : (2 + 1 : ZMod 3) = 0 := rfl
   rw [cornerValue_mk, sub_eq_iff_eq_add, CornerPiece.value_cyclic', add_comm, sub_eq_iff_eq_add,
     add_assoc, this, add_zero, CornerPiece.value_eq_iff_of_equiv,
     ← CornerPiece.cyclic_inj, ← CornerPiece.cyclic_inj, CornerPiece.cyclic₃]
-  rw [← Quotient.eq, Corner.mk_cyclic, ← cornerEquiv_mk, hc, Equiv.Perm.one_apply]
+  rw [← Quotient.eq, Corner.mk_cyclic, ← cornerEquiv_mk, hc, Perm.one_apply]
+
+theorem cornerValue_mul (hc₁ : cornerEquiv cube₁ = 1) (hc₂ : cornerEquiv cube₂ = 1) (c : Corner) :
+    cornerValue (cube₁ * cube₂) c = cornerValue cube₁ c + cornerValue cube₂ c := by
+  have hc₃ : cornerEquiv (cube₁ * cube₂) = 1 := by rw [map_mul, hc₁, hc₂, one_mul]
+  have H₁ : (1 + 1 : ZMod 3) = 2 := rfl
+  have H₂ : (1 + 2 : ZMod 3) = 0 := rfl
+  have H₃ : (2 + 1 : ZMod 3) = 0 := rfl
+  have H₄ : (2 + 2 : ZMod 3) = 1 := rfl
+  refine c.inductionOn ?_
+  intro c
+  obtain h₁ | h₁ | h₁ := ZMod.cases (cube₁.cornerValue ⟦c⟧) <;>
+  obtain h₂ | h₂ | h₂ := ZMod.cases (cube₂.cornerValue ⟦c⟧) <;>
+  rw [h₁, h₂] <;>
+  simp only [cornerValue_eq_zero hc₁, cornerValue_eq_zero hc₂, cornerValue_eq_one hc₁,
+    cornerValue_eq_one hc₂, cornerValue_eq_two hc₁, cornerValue_eq_two hc₂] at h₁ h₂ <;>
+  simp [cornerValue_eq_zero hc₃, cornerValue_eq_one hc₃, cornerValue_eq_two hc₃, H₁, H₂, H₃, H₄,
+    h₁, h₂]
 
 /-- The total parity of a Rubik's cube is the combined parity of edge and corner permutations.
 

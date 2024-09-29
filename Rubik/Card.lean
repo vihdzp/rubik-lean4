@@ -177,12 +177,16 @@ def kerEdgeCornerEquiv :
       · simp [h₂]
       · rw [eq_comm]
         simpa [mul_assoc] using ((ZMod.cases _).resolve_left h₁).resolve_left h₂
-  · intro x y
-    simp
-    sorry
+  · intro cube₁ cube₂
+    simp_rw [Subgroup.coe_mul, Prod.mk_mul_mk, Prod.mk.injEq]
+    constructor
+    · funext e
+      exact edgeValue_mul (edgeEquiv_of_mem_ker_edgeCornerEquiv cube₁.2)
+        (edgeEquiv_of_mem_ker_edgeCornerEquiv cube₂.2) _
+    · funext c
+      exact cornerValue_mul (cornerEquiv_of_mem_ker_edgeCornerEquiv cube₁.2)
+        (cornerEquiv_of_mem_ker_edgeCornerEquiv cube₂.2) _
 
-
-#exit
 /-- There are 2¹² × 3⁸ × 8! × 12! pre-Rubik's cubes. -/
 @[simp]
 protected theorem card : Fintype.card PRubik = 519024039293878272000 := by
