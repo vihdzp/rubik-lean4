@@ -163,10 +163,12 @@ def edgePieces (l : Stickers) (h : IsAdjacent l) (e : EdgePiece) : EdgePiece :=
 def cornerPieces (l : Stickers) (h : IsAdjacent l) (c : CornerPiece) : CornerPiece :=
   let x := cornerOrientations l c; ⟨x.1, x.2.1, x.2.2, h.2 _⟩
 
+@[simp]
 theorem edgePieces_flip {l : Stickers} (h : IsAdjacent l) (e : EdgePiece) :
     (edgePieces l h e.flip) = (edgePieces l h e).flip := by
   fin_cases e <;> rfl
-
+  
+@[simp]
 theorem cornerPieces_cyclic {l : Stickers} (h : IsAdjacent l) (c : CornerPiece) :
     (cornerPieces l h c.cyclic) = (cornerPieces l h c).cyclic := by
   fin_cases c <;> rfl
@@ -289,6 +291,7 @@ theorem toStickers_toPRubik (cube : PRubik) :
 
 end PRubik
 
+set_option maxHeartbeats 500000 in
 @[simp]
 theorem Stickers.toPRubik_toStickers (l : Stickers) (h : l.IsProper) :
     (l.toPRubik h).toStickers = l := by

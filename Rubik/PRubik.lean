@@ -372,15 +372,12 @@ theorem cornerPieceEquiv_rotateCorner (c : Corner) :
 @[simp]
 theorem cornerPieceEquiv_rotateCorner_self (c : CornerPiece) :
     cornerPieceEquiv (rotateCorner ⟦c⟧) c = c.cyclic := by
-  rw [cornerPieceEquiv_rotateCorner, Corner.rotateEquiv_mk, Equiv.cycle_fst]
-  · exact (CornerPiece.cyclic_ne _).symm
-  · exact CornerPiece.cyclic_cyclic_ne _
+  rw [cornerPieceEquiv_rotateCorner, Corner.rotateEquiv_self]
 
 @[simp]
-theorem cornerPieceEquiv_rotateCorner_self_inv (c : CornerPiece) :
+theorem cornerPieceEquiv_rotateCorner_inv_self (c : CornerPiece) :
     (cornerPieceEquiv (rotateCorner ⟦c⟧))⁻¹ c = c.cyclic.cyclic := by
-  rw [Equiv.Perm.inv_def, Equiv.symm_apply_eq, ← Corner.mk_cyclic, ← Corner.mk_cyclic,
-    cornerPieceEquiv_rotateCorner_self, CornerPiece.cyclic₃]
+  rw [cornerPieceEquiv_rotateCorner, Corner.rotateEquiv_inv_self]
 
 @[simp]
 theorem cornerRotation_rotateCorner :

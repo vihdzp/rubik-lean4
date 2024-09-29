@@ -309,7 +309,9 @@ theorem cornerPieceEquiv_rotateCorners (c₁ c₂ : Corner) :
   rw [rotateCorners]
   split_ifs with h
   · simp [h]
-  · simp [cornerPieceEquiv_rotateCornersAux, ← mul_assoc, Equiv.cycle_inv]
+  · simp only [List.append_assoc, move_append, move_symm, ← mul_assoc, cornerPieceEquiv_mul,
+      cornerPieceEquiv_rotateCornersAux, Corner.rotateEquiv_mk, CornerPiece.cyclic_mk,
+      Equiv.cycle_inv, cornerPieceEquiv_inv, Equiv.cycle_conj₂]
     congr
     · conv_rhs => rw [← fixCorners₂_move₁ h, cornerEquiv_mk, Corner.rotateEquiv_mk,
         ← corner_cyclic, ← corner_cyclic]
@@ -317,6 +319,13 @@ theorem cornerPieceEquiv_rotateCorners (c₁ c₂ : Corner) :
     · conv_rhs => rw [← fixCorners₂_move₂ c₁ c₂, cornerEquiv_mk, Corner.rotateEquiv_mk,
         Equiv.cycle_inv, ← corner_cyclic, ← corner_cyclic]
       rfl
+
+@[simp]
+theorem cornerEquiv_rotateCorners (c₁ c₂ : Corner) :
+    cornerEquiv (move (rotateCorners c₁ c₂)) = 1 := by
+  ext c
+  refine c.inductionOn ?_
+  simp [cornerEquiv_mk]
 
 end Moves
 
@@ -540,25 +549,51 @@ private def value (cube : Rubik) (c : Corner) : ZMod 3 :=
     obtain rfl | rfl | rfl := CornerPiece.equiv_iff.1 h <;> simp
   )
 
+private theorem value_mk (cube : Rubik) (c : CornerPiece) :
+    value cube ⟦c⟧ = (cornerPieceEquiv cube c).value Axis.x - c.value Axis.x :=
+  rfl
+
 private theorem value_eq_zero {cube : Rubik} (hc : cornerEquiv cube = 1) (c : CornerPiece) :
     value cube ⟦c⟧ = 0 ↔ cube.1.cornerPieceEquiv c = c := by
-  rw [value, Quotient.lift_mk, sub_eq_zero, CornerPiece.value_eq_iff_of_equiv, eq_comm]
+  rw [value_mk, sub_eq_zero, CornerPiece.value_eq_iff_of_equiv, eq_comm]
   rw [← Quotient.eq, ← cornerEquiv_mk, hc, Equiv.Perm.one_apply]
 
 private theorem value_eq_one {cube : Rubik} (hc : cornerEquiv cube = 1) (c : CornerPiece) :
     value cube ⟦c⟧ = 1 ↔ cube.1.cornerPieceEquiv c = c.cyclic := by
   have : (1 + (1 + 1) : ZMod 3) = 0 := rfl
-  rw [value, Quotient.lift_mk, CornerPiece.value_cyclic', CornerPiece.value_cyclic',
-    sub_eq_iff_eq_add, add_comm, ← sub_eq_iff_eq_add, sub_sub, sub_sub, this, sub_zero,
-    CornerPiece.value_eq_iff_of_equiv, ← CornerPiece.cyclic_inj, CornerPiece.cyclic₃]
+  rw [value_mk, CornerPiece.value_cyclic', CornerPiece.value_cyclic', sub_eq_iff_eq_add, add_comm,
+    ← sub_eq_iff_eq_add, sub_sub, sub_sub, this, sub_zero, CornerPiece.value_eq_iff_of_equiv,
+    ← CornerPiece.cyclic_inj, CornerPiece.cyclic₃]
   rw [← Quotient.eq, Corner.mk_cyclic, Corner.mk_cyclic, ← cornerEquiv_mk, hc, Equiv.Perm.one_apply]
 
 private theorem value_eq_two {cube : Rubik} (hc : cornerEquiv cube = 1) (c : CornerPiece) :
     value cube ⟦c⟧ = 2 ↔ cube.1.cornerPieceEquiv c = c.cyclic.cyclic := by
   have : (2 + 1 : ZMod 3) = 0 := rfl
-  rw [value, Quotient.lift_mk, sub_eq_iff_eq_add, CornerPiece.value_cyclic', add_comm, sub_eq_iff_eq_add, add_assoc, this, add_zero, CornerPiece.value_eq_iff_of_equiv,
+  rw [value_mk, sub_eq_iff_eq_add, CornerPiece.value_cyclic', add_comm, sub_eq_iff_eq_add,
+    add_assoc, this, add_zero, CornerPiece.value_eq_iff_of_equiv,
     ← CornerPiece.cyclic_inj, ← CornerPiece.cyclic_inj, CornerPiece.cyclic₃]
   rw [← Quotient.eq, Corner.mk_cyclic, ← cornerEquiv_mk, hc, Equiv.Perm.one_apply]
+
+private theorem value_mul_rotateCorners_fst (cube : Rubik) {a b : Corner} :
+    a ≠ b → value (cube * move (Moves.rotateCorners a b)) a = value cube a + 1 := by
+  refine a.inductionOn ?_
+  intro a ha
+  simpa [value_mk, Corner.rotateEquiv_inv_of_ne ha.symm] using add_sub_right_comm _ _ _
+
+private theorem value_mul_rotateCorners_snd (cube : Rubik) {a b : Corner} :
+    a ≠ b → value (cube * move (Moves.rotateCorners b a)) a = value cube a + 2 := by
+  have : ((1 + 1) : ZMod 3) = 2 := rfl
+  refine a.inductionOn ?_
+  intro a ha
+  simp [value_mk, Corner.rotateEquiv_of_ne ha.symm, add_sub_right_comm, add_assoc, this]
+
+private theorem value_mul_rotateCorners_of_ne (cube : Rubik) {a b c : Corner} :
+    c ≠ a → c ≠ b → value (cube * move (Moves.rotateCorners a b)) c = value cube c := by
+  refine c.inductionOn ?_
+  intro c ha hb
+  have ha' : a ≠ ⟦b.rotateEquiv⁻¹ c⟧ := by rwa [Corner.mk_rotateEquiv_inv, ne_comm]
+  simp [value_mk, Corner.rotateEquiv_of_ne ha']
+  rw [Corner.rotateEquiv_inv_of_ne hb.symm]
 
 /-- A sequence of moves that puts the cube's corners in their correct orientation, in the specified
 order. -/
@@ -586,6 +621,7 @@ private theorem solveCornerPiecesAux_cornerPieceEquiv (cube : Rubik) (l : List C
     (hl : l.Nodup) (he : edgePieceEquiv cube = 1) (he' : cornerEquiv cube = 1)
     (hc : ∀ c, c ∈ l ↔ value cube c ≠ 0) :
     cornerPieceEquiv (PRubik.move (solveCornerPiecesAux cube l)) = cornerPieceEquiv cube⁻¹ :=
+  have H : ∀ x : ZMod 3, x = 0 ∨ x = 1 ∨ x = 2 := by decide
   match l with
   | [] => by
     simp_rw [List.not_mem_nil, false_iff, not_not] at hc
@@ -596,8 +632,7 @@ private theorem solveCornerPiecesAux_cornerPieceEquiv (cube : Rubik) (l : List C
     exact hc _
   | [a] => by
     apply (not_ne_iff.2 (Rubik.isValid cube).cornerRotation _).elim
-    have : ∀ x : ZMod 3, x = 0 ∨ x = 1 ∨ x = 2 := by decide
-    obtain hx | hx | hx := this (Rubik.value cube a)
+    obtain hx | hx | hx := H (Rubik.value cube a)
     · cases (hc a).1 (List.mem_singleton_self a) hx
     · suffices cube = PRubik.rotateCorner a by
         rw [this, cornerRotation_rotateCorner]
@@ -615,25 +650,41 @@ private theorem solveCornerPiecesAux_cornerPieceEquiv (cube : Rubik) (l : List C
       · rw [he, edgePieceEquiv_inv, edgePieceEquiv_rotateCorner, inv_one]
       · rw [cornerPieceEquiv_inv]
         obtain rfl | ha := eq_or_ne a ⟦e⟧
-        · rwa [cornerPieceEquiv_rotateCorner_self_inv, ← value_eq_one he']
-        · rwa [cornerPieceEquiv_rotateCorner, Corner.rotateEquiv_of_ne ha, ← value_eq_zero he',
+        · rwa [cornerPieceEquiv_rotateCorner_inv_self, ← value_eq_two he']
+        · rwa [cornerPieceEquiv_rotateCorner, Corner.rotateEquiv_inv_of_ne ha, ← value_eq_zero he',
             ← not_ne_iff, ← hc, List.mem_singleton, eq_comm]
-    /-suffices cube.1.cornerPieceEquiv = a.rotateEquiv by
-      sorry-/
   | a::b::l => by
     rw [solveCornerPiecesAux]
-    split_ifs with h
-    · simp
-      rw [solveCornerPiecesAux_cornerPieceEquiv]
-      · simp [mul_assoc]
-      · sorry
-      · simpa
-      · sorry
-      · sorry
-    · sorry
+    split_ifs with h <;>
+    rw [PRubik.move_append, cornerPieceEquiv_mul, cornerPieceEquiv_inv,
+      solveCornerPiecesAux_cornerPieceEquiv]
+    all_goals try simp [mul_assoc]
+    all_goals try exact (List.filter_sublist _).nodup hl.of_cons
+    assumption'
+    · intro c hc'
+      rw [or_iff_not_imp_left]
+      intro hb
+      obtain rfl | ha := eq_or_ne c a
+      · rw [value_mul_rotateCorners_snd _ hb, h] at hc'
+        cases hc' rfl
+      · rw [value_mul_rotateCorners_of_ne _ hb ha, ← ne_eq, ← hc] at hc'
+        simpa [ha, hb] using hc'
+    · have h : value cube a = 2 := by
+        obtain hx | hx | hx := H (value cube a)
+        · rw [← not_ne_iff, ← hc] at hx
+          cases hx (List.mem_cons_self a _)
+        · cases h hx
+        · exact hx
+      intro c hc'
+      rw [or_iff_not_imp_left]
+      intro hb
+      obtain rfl | ha := eq_or_ne c a
+      · rw [value_mul_rotateCorners_fst _ hb, h] at hc'
+        cases hc' rfl
+      · rw [value_mul_rotateCorners_of_ne _ ha hb, ← ne_eq, ← hc] at hc'
+        simpa [ha, hb] using hc'
 termination_by l.length
-decreasing_by exact List.length_filter_lt _ _ _
-  #exit
+decreasing_by all_goals exact List.length_filter_lt _ _ _
 
 /-- A sequence of moves that puts the cube's corners in their correct orientation. -/
 def solveCornerPieces (cube : Rubik) : Moves :=

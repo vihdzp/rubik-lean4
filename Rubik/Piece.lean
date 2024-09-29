@@ -611,19 +611,35 @@ def rotateEquiv (c : Corner) : Equiv.Perm CornerPiece :=
       repeat rw [Equiv.cycle_cyclic]
   )
 
-@[simp]
 theorem rotateEquiv_mk (c : CornerPiece) :
     rotateEquiv ⟦c⟧ = Equiv.cycle c c.cyclic c.cyclic.cyclic :=
   rfl
 
-theorem rotateEquiv_of_ne {c : Corner} {a : CornerPiece} : c ≠ ⟦a⟧ → c.rotateEquiv a = a := by
+@[simp]
+theorem rotateEquiv_self (c : CornerPiece) : rotateEquiv ⟦c⟧ c = c.cyclic := by
+  rw [rotateEquiv_mk, Equiv.cycle_fst]
+  · exact (CornerPiece.cyclic_ne _).symm
+  · exact CornerPiece.cyclic_cyclic_ne _
+
+@[simp]
+theorem rotateEquiv_inv_self (c : CornerPiece) : (rotateEquiv ⟦c⟧)⁻¹ c = c.cyclic.cyclic := by
+  rw [Equiv.Perm.inv_def, Equiv.symm_apply_eq, ← mk_cyclic, ← mk_cyclic, rotateEquiv_self,
+    CornerPiece.cyclic₃]
+
+theorem rotateEquiv_of_ne {c : Corner} {a : CornerPiece} :
+    c ≠ ⟦a⟧ → c.rotateEquiv a = a := by
   refine c.inductionOn ?_
   intro c hc
   rw [ne_eq, Quotient.eq, @comm _ (· ≈ ·), CornerPiece.equiv_iff', not_or, not_or] at hc
   rw [rotateEquiv_mk, Equiv.cycle_apply_of_ne hc.1 hc.2.1 hc.2.2]
 
+theorem rotateEquiv_inv_of_ne {c : Corner} {a : CornerPiece} (hc : c ≠ ⟦a⟧) :
+    c.rotateEquiv⁻¹ a = a := by
+  rw [Equiv.Perm.inv_def, Equiv.symm_apply_eq, rotateEquiv_of_ne hc]
+
 @[simp]
-theorem mk_rotateEquiv (c : Corner) (a : CornerPiece) : ⟦c.rotateEquiv a⟧ = (⟦a⟧ : Corner) := by
+theorem mk_rotateEquiv (c : Corner) (a : CornerPiece) :
+    ⟦c.rotateEquiv a⟧ = (⟦a⟧ : Corner) := by
   obtain rfl | ha := eq_or_ne c ⟦a⟧
   · rw [rotateEquiv_mk, Quotient.eq, Equiv.cycle_fst]
     · exact a.cyclic_equiv
@@ -631,6 +647,12 @@ theorem mk_rotateEquiv (c : Corner) (a : CornerPiece) : ⟦c.rotateEquiv a⟧ = 
       exact a.cyclic_ne.symm
     · exact a.cyclic_cyclic_ne
   · rw [rotateEquiv_of_ne ha]
+
+@[simp]
+theorem mk_rotateEquiv_inv (c : Corner) (a : CornerPiece) :
+    ⟦c.rotateEquiv⁻¹ a⟧ = (⟦a⟧ : Corner) := by
+  conv_rhs => rw [← c.rotateEquiv.apply_symm_apply a]
+  rw [mk_rotateEquiv, Equiv.Perm.inv_def]
 
 @[simp]
 theorem rotateEquiv_cyclic (c : Corner) (a : CornerPiece) :
