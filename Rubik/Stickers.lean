@@ -190,8 +190,8 @@ theorem isProper_solved : IsProper Solved :=
 
 /-- Construct a `PRubik` from a set of stickers, inferring the necessary hypotheses. -/
 def toPRubik (l : Stickers) (h : IsProper l := by decide) : PRubik := by
-  refine ⟨Equiv.Perm.ofSurjective (f := edgePieces l ?_) ?_,
-    Equiv.Perm.ofSurjective (f := cornerPieces l ?_) ?_,
+  refine ⟨Equiv.Perm.ofSurjective (edgePieces l ?_) ?_,
+    Equiv.Perm.ofSurjective (cornerPieces l ?_) ?_,
     edgePieces_flip h.isAdjacent, cornerPieces_cyclic h.isAdjacent⟩ <;>
   obtain ⟨h, _, _⟩ := h <;> assumption
 

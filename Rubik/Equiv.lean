@@ -89,13 +89,13 @@ theorem cycle_conj₂' : e⁻¹ * cycle a b c * cycle x y z * e =
   cycle_conj₂ e⁻¹ a b c x y z
 
 /-- A computable permutation from a surjective function. -/
-def Perm.ofSurjective [Fintype α] {f : α → α} (h : Function.Surjective f) : Perm α :=
+def Perm.ofSurjective [Fintype α] (f : α → α) (h : Function.Surjective f) : Perm α :=
   ⟨f, Fintype.bijInv ((Fintype.bijective_iff_surjective_and_card _).2 ⟨h, rfl⟩),
     Fintype.leftInverse_bijInv _, Fintype.rightInverse_bijInv _⟩
 
 @[simp]
 theorem Perm.ofSurjective_apply [Fintype α] {f : α → α} (h : Function.Surjective f) (a : α) :
-    Perm.ofSurjective h a = f a :=
+    Perm.ofSurjective f h a = f a :=
   rfl
 
 end Equiv

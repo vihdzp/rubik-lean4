@@ -12,6 +12,14 @@ homomorphism into `ℤ₂ × ℤ₂ × ℤ₃` whose kernel will be shown to con
 Rubik's cubes.
 -/
 
+/-- The map `1 → 0`, `-1 → 1`. -/
+def Units.toZMod (x : ℤˣ) : ZMod 2 :=
+  if x = 1 then 0 else 1
+
+@[simp]
+theorem Units.toZMod_mul : ∀ x y : ℤˣ, (x * y).toZMod = x.toZMod + y.toZMod := by
+  decide
+
 open Orientation Equiv
 
 /-- A pre-Rubik's cube. We represent this as a permutation of the edge pieces, and a permutation of
@@ -275,6 +283,24 @@ theorem edgeValue_mk (cube : PRubik) (e : EdgePiece) :
     edgeValue cube ⟦e⟧ = if cube.edgePieceEquiv e = e then 1 else -1 :=
   rfl
 
+theorem edgeValue_eq_one {cube : PRubik} {e : EdgePiece} :
+    edgeValue cube ⟦e⟧ = 1 ↔ cube.edgePieceEquiv e = e := by
+  simp [edgeValue_mk]
+
+theorem edgeValue_eq_neg_one' {cube : PRubik} {e : EdgePiece} :
+    edgeValue cube ⟦e⟧ = -1 ↔ cube.edgePieceEquiv e ≠ e := by
+  simp [edgeValue_mk]
+
+theorem edgeValue_eq_neg_one {cube : PRubik} (he : edgeEquiv cube = 1) {e : EdgePiece} :
+    edgeValue cube ⟦e⟧ = -1 ↔ cube.edgePieceEquiv e = e.flip := by
+  rw [edgeValue_eq_neg_one']
+  refine ⟨fun h ↦ ?_, fun h ↦ h ▸ e.flip_ne⟩
+  have : ⟦cube.edgePieceEquiv e⟧ = (⟦e⟧ : Edge) := by rw [← edgeEquiv_mk, he, Perm.one_apply]
+  rw [Quotient.eq, EdgePiece.equiv_iff] at this
+  obtain he | he := this
+  · contradiction
+  · rw [he]
+
 /-- In a Rubik's cube where all corners are in their correct position, the "corner value" of a
 corner represents the number of **counterclockwise** turns required to solve it. -/
 def cornerValue (cube : PRubik) (c : Corner) : ZMod 3 :=
@@ -287,12 +313,12 @@ theorem cornerValue_mk (cube : PRubik) (c : CornerPiece) :
     cornerValue cube ⟦c⟧ = (cornerPieceEquiv cube c).value Axis.x - c.value Axis.x :=
   rfl
 
-theorem cornerValue_eq_zero {cube : PRubik} (hc : cornerEquiv cube = 1) (c : CornerPiece) :
+theorem cornerValue_eq_zero {cube : PRubik} (hc : cornerEquiv cube = 1) {c : CornerPiece} :
     cornerValue cube ⟦c⟧ = 0 ↔ cube.cornerPieceEquiv c = c := by
   rw [cornerValue_mk, sub_eq_zero, CornerPiece.value_eq_iff_of_equiv, eq_comm]
   rw [← Quotient.eq, ← cornerEquiv_mk, hc, Equiv.Perm.one_apply]
 
-theorem cornerValue_eq_one {cube : PRubik} (hc : cornerEquiv cube = 1) (c : CornerPiece) :
+theorem cornerValue_eq_one {cube : PRubik} (hc : cornerEquiv cube = 1) {c : CornerPiece} :
     cornerValue cube ⟦c⟧ = 1 ↔ cube.cornerPieceEquiv c = c.cyclic := by
   have : (1 + (1 + 1) : ZMod 3) = 0 := rfl
   rw [cornerValue_mk, CornerPiece.value_cyclic', CornerPiece.value_cyclic', sub_eq_iff_eq_add,
@@ -300,7 +326,7 @@ theorem cornerValue_eq_one {cube : PRubik} (hc : cornerEquiv cube = 1) (c : Corn
     CornerPiece.value_eq_iff_of_equiv, ← CornerPiece.cyclic_inj, CornerPiece.cyclic₃]
   rw [← Quotient.eq, Corner.mk_cyclic, Corner.mk_cyclic, ← cornerEquiv_mk, hc, Equiv.Perm.one_apply]
 
-theorem cornerValue_eq_two {cube : PRubik} (hc : cornerEquiv cube = 1) (c : CornerPiece) :
+theorem cornerValue_eq_two {cube : PRubik} (hc : cornerEquiv cube = 1) {c : CornerPiece} :
     cornerValue cube ⟦c⟧ = 2 ↔ cube.cornerPieceEquiv c = c.cyclic.cyclic := by
   have : (2 + 1 : ZMod 3) = 0 := rfl
   rw [cornerValue_mk, sub_eq_iff_eq_add, CornerPiece.value_cyclic', add_comm, sub_eq_iff_eq_add,
@@ -438,8 +464,8 @@ def invariant : PRubik →* ℤˣ × ℤˣ × Multiplicative (ZMod 3) :=
 
 /-- A constructive right inverse for the invariant. -/
 def invariant_inv : ℤˣ × ℤˣ × Multiplicative (ZMod 3) → PRubik :=
-  fun n ↦ (swapEdges (default : EdgePiece).isAdjacent) ^ ((1 - n.1.1) / 2) *
-    (flipEdge default) ^ ((1 - n.2.1.1) / 2) * (rotateCorner default) ^ n.2.2.1
+  fun ⟨a, b, c⟩ ↦ (swapEdges (default : EdgePiece).isAdjacent) ^ ((1 - a.1) / 2) *
+    (flipEdge default) ^ b.toZMod.1 * (rotateCorner default) ^ c.1
 
 theorem invariant_rightInverse : Function.RightInverse invariant_inv invariant := by
   decide

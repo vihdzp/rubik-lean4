@@ -717,5 +717,3 @@ instance : DecidablePred IsSolvable :=
   fun _ ↦ decidable_of_iff _ isValid_iff_isSolvable
 
 end PRubik
-
-open Orientation
