@@ -324,7 +324,7 @@ theorem isAdjacent (c : CornerPiece) : IsAdjacent c.fst c.snd :=
   c.isAdjacent₃.isAdjacent
 
 /-- Edge pieces and corner pieces can be put in bijection. -/
-def _root_.EdgeCornerEquiv : EdgePiece ≃ CornerPiece where
+def _root_.EdgeCornerPieceEquiv : EdgePiece ≃ CornerPiece where
   toFun e := ⟨_, _, _, e.isAdjacent.isAdjacent₃⟩
   invFun c := ⟨_, _, c.isAdjacent⟩
   left_inv _ := rfl
@@ -337,11 +337,11 @@ instance : Repr CornerPiece :=
   ⟨fun c ↦ [c.fst, c.snd, c.thd].repr⟩
 
 instance : Fintype CornerPiece :=
-  Fintype.ofEquiv _ EdgeCornerEquiv
+  Fintype.ofEquiv _ EdgeCornerPieceEquiv
 
 /-- An "arbitrary" computable linear order. -/
 instance : LinearOrder CornerPiece :=
-  LinearOrder.lift' _ EdgeCornerEquiv.symm.injective
+  LinearOrder.lift' _ EdgeCornerPieceEquiv.symm.injective
 
 protected theorem ne (c : CornerPiece) : c.fst ≠ c.snd ∧ c.snd ≠ c.thd ∧ c.thd ≠ c.fst :=
   c.isAdjacent₃.ne
