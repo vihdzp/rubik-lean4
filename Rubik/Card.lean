@@ -41,8 +41,52 @@ namespace PRubik
 def edgeCornerEquiv : PRubik →* Perm Edge × Perm Corner :=
   PRubik.edgeEquiv.prod PRubik.cornerEquiv
 
+/- It's perfectly possible to provide a constructive proof, but it's a bit easier to do this via
+choice. -/
 theorem edgeCornerEquiv_surjective : Function.Surjective edgeCornerEquiv := by
-  sorry
+  rintro ⟨f, g⟩
+  let f' : EdgePiece → EdgePiece := fun e ↦ let x := (f ⟦e⟧).out
+    if e = ⟦e⟧.out then x else x.flip
+  let g' : CornerPiece → CornerPiece := fun c ↦ let x := (g ⟦c⟧).out
+    if c = ⟦c⟧.out then x else if c = ⟦c⟧.out.cyclic then x.cyclic else x.cyclic.cyclic
+  refine ⟨⟨Equiv.Perm.ofSurjective (f := f') ?_, Equiv.Perm.ofSurjective (f := g') ?_, ?_, ?_⟩, ?_⟩
+  · intro e
+    obtain he | he := EdgePiece.equiv_iff.1 (Quotient.mk_out e).symm
+    · use (f.symm ⟦e⟧).out
+      simpa [f'] using he.symm
+    · use (f.symm ⟦e⟧).out.flip
+      simpa [f'] using he.symm
+  · intro c
+    obtain hc | hc | hc := CornerPiece.equiv_iff'.1 (Quotient.mk_out c).symm
+    · use (g.symm ⟦c⟧).out
+      simpa [g'] using hc.symm
+    · use (g.symm ⟦c⟧).out.cyclic
+      simpa [g'] using hc.symm
+    · use (g.symm ⟦c⟧).out.cyclic.cyclic
+      simpa [g'] using hc.symm
+  · intro e
+    simp_rw [Perm.ofSurjective_apply, f']
+    obtain he | he := EdgePiece.equiv_iff.1 (Quotient.mk_out e)
+    · simp [he]
+    · simp [he, e.flip_ne.symm]
+  · intro c
+    simp_rw [Perm.ofSurjective_apply, g', Corner.mk_cyclic, CornerPiece.cyclic_inj]
+    obtain hc | hc | hc := CornerPiece.equiv_iff'.1 (Quotient.mk_out c)
+    · simp [hc]
+    · simp [hc, c.cyclic_ne.symm, c.cyclic_cyclic_ne.symm]
+    · simp [hc, c.cyclic_ne.symm, c.cyclic_cyclic_ne.symm]
+  · rw [edgeCornerEquiv, MonoidHom.prod_apply, Prod.mk.injEq]
+    constructor
+    · ext e
+      refine e.inductionOn ?_
+      intro e
+      simp_rw [edgeEquiv_mk, f', Perm.ofSurjective_apply]
+      split_ifs <;> simp
+    · ext c
+      refine c.inductionOn ?_
+      intro c
+      simp_rw [cornerEquiv_mk, g', Perm.ofSurjective_apply]
+      split_ifs <;> simp
 
 /-- The kernel of `edgeCornerEquiv` consists of cubes with only their edges flipped and corners
 rotated. -/
@@ -74,3 +118,5 @@ protected theorem card : Fintype.card Rubik = 43252003274489856000 := by
   · simp_rw [Nat.card_prod, Nat.card_eq_fintype_card, PRubik.card]
     simp
   · simp
+
+end Rubik

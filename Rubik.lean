@@ -1,4 +1,5 @@
+import Rubik.Algorithm
 import Rubik.Card
-import Rubik.FromPieces
+import Rubik.Stickers
 
 /-! Imports all other modules. -/

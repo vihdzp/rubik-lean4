@@ -167,7 +167,7 @@ def cornerPieces (l : Stickers) (h : IsAdjacent l) (c : CornerPiece) : CornerPie
 theorem edgePieces_flip {l : Stickers} (h : IsAdjacent l) (e : EdgePiece) :
     (edgePieces l h e.flip) = (edgePieces l h e).flip := by
   fin_cases e <;> rfl
-  
+
 @[simp]
 theorem cornerPieces_cyclic {l : Stickers} (h : IsAdjacent l) (c : CornerPiece) :
     (cornerPieces l h c.cyclic) = (cornerPieces l h c).cyclic := by
@@ -190,17 +190,10 @@ theorem isProper_solved : IsProper Solved :=
 
 /-- Construct a `PRubik` from a set of stickers, inferring the necessary hypotheses. -/
 def toPRubik (l : Stickers) (h : IsProper l := by decide) : PRubik := by
-  refine
-    ⟨⟨edgePieces l ?_, Fintype.bijInv ?_,
-      Fintype.leftInverse_bijInv _, Fintype.rightInverse_bijInv _⟩,
-    ⟨cornerPieces l ?_, Fintype.bijInv ?_,
-      Fintype.leftInverse_bijInv _, Fintype.rightInverse_bijInv _⟩,
-      edgePieces_flip h.isAdjacent, cornerPieces_cyclic h.isAdjacent⟩ <;>
-  obtain ⟨h, _, _⟩ := h
-  assumption'
-  all_goals
-    refine (Fintype.bijective_iff_surjective_and_card _).2 ⟨?_, rfl⟩
-    assumption
+  refine ⟨Equiv.Perm.ofSurjective (f := edgePieces l ?_) ?_,
+    Equiv.Perm.ofSurjective (f := cornerPieces l ?_) ?_,
+    edgePieces_flip h.isAdjacent, cornerPieces_cyclic h.isAdjacent⟩ <;>
+  obtain ⟨h, _, _⟩ := h <;> assumption
 
 /-- Construct a `Rubik` from a set of stickers, inferring the necessary hypotheses. -/
 def toRubik (l : Stickers) (h : IsProper l := by decide)

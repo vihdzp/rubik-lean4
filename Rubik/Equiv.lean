@@ -1,3 +1,4 @@
+import Mathlib.Data.Fintype.Card
 import Mathlib.GroupTheory.Perm.Basic
 
 /-!
@@ -86,5 +87,15 @@ theorem cycle_conj₂ : e * (cycle a b c) * (cycle x y z) * e⁻¹ =
 theorem cycle_conj₂' : e⁻¹ * cycle a b c * cycle x y z * e =
     cycle (e⁻¹ a) (e⁻¹ b) (e⁻¹ c) * cycle (e⁻¹ x) (e⁻¹ y) (e⁻¹ z) :=
   cycle_conj₂ e⁻¹ a b c x y z
+
+/-- A computable permutation from a surjective function. -/
+def Perm.ofSurjective [Fintype α] {f : α → α} (h : Function.Surjective f) : Perm α :=
+  ⟨f, Fintype.bijInv ((Fintype.bijective_iff_surjective_and_card _).2 ⟨h, rfl⟩),
+    Fintype.leftInverse_bijInv _, Fintype.rightInverse_bijInv _⟩
+
+@[simp]
+theorem Perm.ofSurjective_apply [Fintype α] {f : α → α} (h : Function.Surjective f) (a : α) :
+    Perm.ofSurjective h a = f a :=
+  rfl
 
 end Equiv

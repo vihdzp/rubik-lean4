@@ -100,6 +100,7 @@ theorem flip₂ (e : EdgePiece) : e.flip.flip = e :=
 theorem flip_inj {e₁ e₂ : EdgePiece} : e₁.flip = e₂.flip ↔ e₁ = e₂ :=
   (Function.LeftInverse.injective flip₂).eq_iff
 
+@[simp]
 theorem flip_ne (e : EdgePiece) : e.flip ≠ e := by
   rw [ne_eq, EdgePiece.ext_iff, flip_fst, flip_snd, not_and]
   intro h
@@ -377,11 +378,13 @@ theorem cyclic_inj {c₁ c₂ : CornerPiece} : c₁.cyclic = c₂.cyclic ↔ c�
   · rintro rfl
     rfl
 
+@[simp]
 theorem cyclic_ne (c : CornerPiece) : c.cyclic ≠ c := by
   rw [ne_eq, ext_iff, not_and, cyclic_fst]
   intro h
   cases c.isAdjacent.ne h.symm
 
+@[simp]
 theorem cyclic_cyclic_ne (c : CornerPiece) : c.cyclic.cyclic ≠ c :=
   (cyclic_ne c.cyclic.cyclic).symm
 
