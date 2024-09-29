@@ -221,6 +221,17 @@ unsafe instance : Repr Edge :=
 instance : LinearOrder Edge :=
   LinearOrder.lift' (fun e ↦ Finset.Colex.toColex e.toFinset) (fun _ _ ↦ by simp)
 
+/-- Computably chooses an edge piece equivalent to this edge. -/
+def out (e : Edge) : EdgePiece :=
+  (Finset.univ.sort (· ≤ ·)).choose (fun x ↦ ⟦x⟧ = e) ⟨Quotient.out e, by simp⟩
+
+@[simp]
+theorem out_eq (e : Edge) : ⟦e.out⟧ = e :=
+  (List.choose_spec (fun x ↦ ⟦x⟧ = e) _ _).2
+
+theorem mk_out (e : EdgePiece) : Edge.out ⟦e⟧ ≈ e :=
+  Quotient.exact (out_eq _)
+
 /-- Given an edge and an orientation it contains, you can recover a unique edge piece within that
 edge with that orientation.
 
@@ -571,6 +582,17 @@ unsafe instance : Repr Corner :=
 /-- An "arbitrary" computable linear order. -/
 instance : LinearOrder Corner :=
   LinearOrder.lift' (fun c ↦ Finset.Colex.toColex c.toFinset) (fun _ _ ↦ by simp)
+
+/-- Computably chooses a corner piece equivalent to this corner. -/
+def out (c : Corner) : CornerPiece :=
+  (Finset.univ.sort (· ≤ ·)).choose (fun x ↦ ⟦x⟧ = c) ⟨Quotient.out c, by simp⟩
+
+@[simp]
+theorem out_eq (c : Corner) : ⟦c.out⟧ = c :=
+  (List.choose_spec (fun x ↦ ⟦x⟧ = c) _ _).2
+
+theorem mk_out (c : CornerPiece) : Corner.out ⟦c⟧ ≈ c :=
+  Quotient.exact (out_eq _)
 
 /-- Given a corner and an axis, you can recover a unique corner piece within that corner with that
 axis. -/

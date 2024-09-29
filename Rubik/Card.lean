@@ -58,43 +58,48 @@ theorem cornerEquiv_of_mem_ker_edgeCornerEquiv (h : cube ∈ edgeCornerEquiv.ker
     cornerEquiv cube = 1 :=
   (mem_ker_edgeCornerEquiv.1 h).2
 
-/- It's perfectly possible to provide a constructive proof, but it's a bit easier to do this via
-choice. -/
-theorem edgeCornerEquiv_surjective : Function.Surjective edgeCornerEquiv := by
-  rintro ⟨f, g⟩
-  let f' : EdgePiece → EdgePiece := fun e ↦ let x := (f ⟦e⟧).out
-    if e = ⟦e⟧.out then x else x.flip
-  let g' : CornerPiece → CornerPiece := fun c ↦ let x := (g ⟦c⟧).out
-    if c = ⟦c⟧.out then x else if c = ⟦c⟧.out.cyclic then x.cyclic else x.cyclic.cyclic
-  refine ⟨⟨Equiv.Perm.ofSurjective f' ?_, Equiv.Perm.ofSurjective g' ?_, ?_, ?_⟩, ?_⟩
+/-- A computable inverse for `edgeCornerEquiv`. -/
+def edgeCornerEquiv_inv (p : Perm Edge × Perm Corner) : PRubik := by
+  let f' : EdgePiece → EdgePiece := fun e ↦ let x := (p.1 ⟦e⟧).out
+    if e = Edge.out ⟦e⟧ then x else x.flip
+  let g' : CornerPiece → CornerPiece := fun c ↦ let x := (p.2 ⟦c⟧).out
+    if c = Corner.out ⟦c⟧ then x else
+      if c = (Corner.out ⟦c⟧).cyclic then x.cyclic else x.cyclic.cyclic
+  refine ⟨Equiv.Perm.ofSurjective f' ?_, Equiv.Perm.ofSurjective g' ?_, ?_, ?_⟩
   · intro e
-    obtain he | he := EdgePiece.equiv_iff.1 (Quotient.mk_out e).symm
-    · use (f.symm ⟦e⟧).out
+    obtain he | he := EdgePiece.equiv_iff.1 (Edge.mk_out e).symm
+    · use (p.1.symm ⟦e⟧).out
       simpa [f'] using he.symm
-    · use (f.symm ⟦e⟧).out.flip
+    · use (p.1.symm ⟦e⟧).out.flip
       simpa [f'] using he.symm
   · intro c
-    obtain hc | hc | hc := CornerPiece.equiv_iff'.1 (Quotient.mk_out c).symm
-    · use (g.symm ⟦c⟧).out
+    obtain hc | hc | hc := CornerPiece.equiv_iff'.1 (Corner.mk_out c).symm
+    · use (p.2.symm ⟦c⟧).out
       simpa [g'] using hc.symm
-    · use (g.symm ⟦c⟧).out.cyclic
+    · use (p.2.symm ⟦c⟧).out.cyclic
       simpa [g'] using hc.symm
-    · use (g.symm ⟦c⟧).out.cyclic.cyclic
+    · use (p.2.symm ⟦c⟧).out.cyclic.cyclic
       simpa [g'] using hc.symm
   · intro e
     simp_rw [Perm.ofSurjective_apply, f']
-    obtain he | he := EdgePiece.equiv_iff.1 (Quotient.mk_out e) <;>
+    obtain he | he := EdgePiece.equiv_iff.1 (Edge.mk_out e) <;>
     simp [he, e.flip_ne.symm]
   · intro c
     simp_rw [Perm.ofSurjective_apply, g', Corner.mk_cyclic, CornerPiece.cyclic_inj]
-    obtain hc | hc | hc := CornerPiece.equiv_iff'.1 (Quotient.mk_out c) <;>
+    obtain hc | hc | hc := CornerPiece.equiv_iff'.1 (Corner.mk_out c) <;>
     simp [hc, c.cyclic_ne.symm, c.cyclic_cyclic_ne.symm]
-  · rw [edgeCornerEquiv_apply, Prod.mk.injEq]
-    constructor <;> ext x <;> refine x.inductionOn ?_ <;> intro x
-    · simp_rw [edgeEquiv_mk, f', Perm.ofSurjective_apply]
-      split_ifs <;> simp
-    · simp_rw [cornerEquiv_mk, g', Perm.ofSurjective_apply]
-      split_ifs <;> simp
+
+theorem edgeCornerEquiv_leftInverse : Function.LeftInverse edgeCornerEquiv edgeCornerEquiv_inv := by
+  intro x
+  rw [edgeCornerEquiv_apply, Prod.mk.injEq]
+  constructor <;> ext x <;> refine x.inductionOn ?_ <;> intro x
+  · simp_rw [edgeEquiv_mk, edgeCornerEquiv_inv, Perm.ofSurjective_apply]
+    split_ifs <;> simp
+  · simp_rw [cornerEquiv_mk, edgeCornerEquiv_inv, Perm.ofSurjective_apply]
+    split_ifs <;> simp
+
+theorem edgeCornerEquiv_surjective : Function.Surjective edgeCornerEquiv :=
+  edgeCornerEquiv_leftInverse.surjective
 
 /-- The kernel of `edgeCornerEquiv` consists of cubes with only their edges flipped and corners
 rotated. -/

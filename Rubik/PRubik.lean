@@ -498,11 +498,11 @@ def invariant_inv : ℤˣ × ℤˣ × Multiplicative (ZMod 3) → PRubik :=
   fun ⟨a, b, c⟩ ↦ (swapEdges (default : EdgePiece).isAdjacent) ^ ((1 - a.1) / 2) *
     (flipEdge default) ^ b.toZMod.1 * (rotateCorner default) ^ c.1
 
-theorem invariant_rightInverse : Function.RightInverse invariant_inv invariant := by
+theorem invariant_leftInverse : Function.LeftInverse invariant invariant_inv := by
   decide
 
 theorem invariant_surjective : Function.Surjective invariant :=
-  invariant_rightInverse.surjective
+  invariant_leftInverse.surjective
 
 /-- A Rubik's cube is valid when it has invariant 1. We show that this condition is equivalent to
 being solvable. -/
