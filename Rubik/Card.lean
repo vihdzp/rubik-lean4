@@ -193,7 +193,6 @@ def kerEdgeCornerEquiv :
         (cornerEquiv_of_mem_ker_edgeCornerEquiv cube₂.2) _
 
 /-- There are 2¹² × 3⁸ × 8! × 12! pre-Rubik's cubes. -/
-@[simp]
 protected theorem card : Fintype.card PRubik = 519024039293878272000 := by
   simp_rw [← Nat.card_eq_fintype_card,
     Subgroup.card_eq_card_quotient_mul_card_subgroup PRubik.edgeCornerEquiv.ker,
@@ -207,7 +206,6 @@ end PRubik
 namespace Rubik
 
 /-- There are 2¹² × 3⁸ × 8! × 11! Rubik's cubes. -/
-@[simp]
 protected theorem card : Fintype.card Rubik = 43252003274489856000 := by
   have := Subgroup.card_eq_card_quotient_mul_card_subgroup PRubik.invariant.ker
   simp_rw [Nat.card_congr (QuotientGroup.quotientKerEquivRange _).toEquiv, MonoidHom.mem_range,

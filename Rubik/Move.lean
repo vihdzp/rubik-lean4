@@ -226,10 +226,9 @@ theorem deduplicateCore_length_le (m : Moves) : (deduplicateCore m).length ≤ m
 /-- Recursively removes any instances of four consecutive rotations from a list of moves. -/
 def deduplicate (m : Moves) : Moves :=
   let l := deduplicateCore m
-  if h : l = m then m else
-    have := (deduplicateCore_eq_or_length_lt m).resolve_left h
-    deduplicate l
+  if l = m then m else deduplicate l
 termination_by m.length
+decreasing_by apply (deduplicateCore_eq_or_length_lt m).resolve_left; assumption
 
 theorem deduplicate_of_eq (h : deduplicateCore m = m) : deduplicate m = m := by
   rw [deduplicate]

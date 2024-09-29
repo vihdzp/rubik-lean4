@@ -159,7 +159,7 @@ def Orientation : Type := Bool × Axis
 namespace Orientation
 
 instance : Inhabited Orientation :=
-  ⟨(true, Axis.x)⟩ 
+  ⟨(true, Axis.x)⟩
 
 instance decEq : DecidableEq Orientation :=
   inferInstanceAs (DecidableEq (Bool × Axis))
