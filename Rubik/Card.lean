@@ -66,33 +66,27 @@ theorem edgeCornerEquiv_surjective : Function.Surjective edgeCornerEquiv := by
       simpa [g'] using hc.symm
   · intro e
     simp_rw [Perm.ofSurjective_apply, f']
-    obtain he | he := EdgePiece.equiv_iff.1 (Quotient.mk_out e)
-    · simp [he]
-    · simp [he, e.flip_ne.symm]
+    obtain he | he := EdgePiece.equiv_iff.1 (Quotient.mk_out e) <;>
+    simp [he, e.flip_ne.symm]
   · intro c
     simp_rw [Perm.ofSurjective_apply, g', Corner.mk_cyclic, CornerPiece.cyclic_inj]
-    obtain hc | hc | hc := CornerPiece.equiv_iff'.1 (Quotient.mk_out c)
-    · simp [hc]
-    · simp [hc, c.cyclic_ne.symm, c.cyclic_cyclic_ne.symm]
-    · simp [hc, c.cyclic_ne.symm, c.cyclic_cyclic_ne.symm]
+    obtain hc | hc | hc := CornerPiece.equiv_iff'.1 (Quotient.mk_out c) <;>
+    simp [hc, c.cyclic_ne.symm, c.cyclic_cyclic_ne.symm]
   · rw [edgeCornerEquiv, MonoidHom.prod_apply, Prod.mk.injEq]
-    constructor
-    · ext e
-      refine e.inductionOn ?_
-      intro e
-      simp_rw [edgeEquiv_mk, f', Perm.ofSurjective_apply]
+    constructor <;> ext x <;> refine x.inductionOn ?_ <;> intro x
+    · simp_rw [edgeEquiv_mk, f', Perm.ofSurjective_apply]
       split_ifs <;> simp
-    · ext c
-      refine c.inductionOn ?_
-      intro c
-      simp_rw [cornerEquiv_mk, g', Perm.ofSurjective_apply]
+    · simp_rw [cornerEquiv_mk, g', Perm.ofSurjective_apply]
       split_ifs <;> simp
 
 /-- The kernel of `edgeCornerEquiv` consists of cubes with only their edges flipped and corners
 rotated. -/
-def kerEdgeCornerEquiv : edgeCornerEquiv.ker ≃* (Edge → ℤˣ) × (Corner → Multiplicative (ZMod 3)) :=
-  sorry
+def kerEdgeCornerEquiv :
+    edgeCornerEquiv.ker ≃* (Edge → ℤˣ) × (Corner → Multiplicative (ZMod 3)) where
+  toFun cube := ⟨fun e ↦ if cube.edge
 
+
+#exit
 /-- There are 2¹² × 3⁸ × 8! × 12! pre-Rubik's cubes. -/
 @[simp]
 protected theorem card : Fintype.card PRubik = 519024039293878272000 := by

@@ -263,6 +263,51 @@ theorem cornerEquiv_of_cornerPieceEquiv_eq_one (h : cornerPieceEquiv cube = 1) :
   refine c.inductionOn ?_
   simp [cornerEquiv_mk, h]
 
+/-- In a Rubik's cube where all edges are in their correct position, the "edge value" of an edge
+represents whether it's flipped or not. -/
+def edgeValue (cube : PRubik) (e : Edge) : ℤˣ :=
+  e.lift (fun e ↦ if cube.edgePieceEquiv e = e then 1 else -1) (by
+    intro e₁ e₂ h
+    obtain rfl | rfl := EdgePiece.equiv_iff.1 h <;> simp
+  )
+
+theorem edgeValue_mk (cube : PRubik) (e : EdgePiece) :
+    edgeValue cube ⟦e⟧ = if cube.edgePieceEquiv e = e then 1 else -1 :=
+  rfl
+
+/-- In a Rubik's cube where all corners are in their correct position, the "corner value" of a
+corner represents the number of **counterclockwise** turns required to solve it. -/
+def cornerValue (cube : PRubik) (c : Corner) : ZMod 3 :=
+  c.lift (fun c ↦ (cornerPieceEquiv cube c).value Axis.x - c.value Axis.x) (by
+    intro c₁ c₂ h
+    obtain rfl | rfl | rfl := CornerPiece.equiv_iff.1 h <;> simp
+  )
+
+theorem cornerValue_mk (cube : PRubik) (c : CornerPiece) :
+    cornerValue cube ⟦c⟧ = (cornerPieceEquiv cube c).value Axis.x - c.value Axis.x :=
+  rfl
+
+theorem cornerValue_eq_zero {cube : PRubik} (hc : cornerEquiv cube = 1) (c : CornerPiece) :
+    cornerValue cube ⟦c⟧ = 0 ↔ cube.cornerPieceEquiv c = c := by
+  rw [cornerValue_mk, sub_eq_zero, CornerPiece.value_eq_iff_of_equiv, eq_comm]
+  rw [← Quotient.eq, ← cornerEquiv_mk, hc, Equiv.Perm.one_apply]
+
+theorem cornerValue_eq_one {cube : PRubik} (hc : cornerEquiv cube = 1) (c : CornerPiece) :
+    cornerValue cube ⟦c⟧ = 1 ↔ cube.cornerPieceEquiv c = c.cyclic := by
+  have : (1 + (1 + 1) : ZMod 3) = 0 := rfl
+  rw [cornerValue_mk, CornerPiece.value_cyclic', CornerPiece.value_cyclic', sub_eq_iff_eq_add,
+    add_comm, ← sub_eq_iff_eq_add, sub_sub, sub_sub, this, sub_zero,
+    CornerPiece.value_eq_iff_of_equiv, ← CornerPiece.cyclic_inj, CornerPiece.cyclic₃]
+  rw [← Quotient.eq, Corner.mk_cyclic, Corner.mk_cyclic, ← cornerEquiv_mk, hc, Equiv.Perm.one_apply]
+
+theorem cornerValue_eq_two {cube : PRubik} (hc : cornerEquiv cube = 1) (c : CornerPiece) :
+    cornerValue cube ⟦c⟧ = 2 ↔ cube.cornerPieceEquiv c = c.cyclic.cyclic := by
+  have : (2 + 1 : ZMod 3) = 0 := rfl
+  rw [cornerValue_mk, sub_eq_iff_eq_add, CornerPiece.value_cyclic', add_comm, sub_eq_iff_eq_add,
+    add_assoc, this, add_zero, CornerPiece.value_eq_iff_of_equiv,
+    ← CornerPiece.cyclic_inj, ← CornerPiece.cyclic_inj, CornerPiece.cyclic₃]
+  rw [← Quotient.eq, Corner.mk_cyclic, ← cornerEquiv_mk, hc, Equiv.Perm.one_apply]
+
 /-- The total parity of a Rubik's cube is the combined parity of edge and corner permutations.
 
 This is an invariant under any valid move. -/
