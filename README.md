@@ -3,7 +3,7 @@
 This repository provides a mathematical formalization of Rubik's cubes. We prove the following results:
 
 - `PRubik.isSolvable_iff_isValid`: a Rubik's cube is solvable iff it is "valid", i.e. it has no flipped edges, swapped pieces, or rotated corners.
-- `Rubik.card`: there are 2¹² × 3⁸ × 8! × 11 solvable Rubik's cubes.
+- `Rubik.card`: there are 2¹² × 3⁸ × 8! × 11 = 43,252,003,274,489,856,000 solvable Rubik's cubes.
 
 We also provide `Stickers.toRubik`, which assembles a Rubik's cube from its stickers and automatically deduces its validity.
 
