@@ -2,7 +2,7 @@ import Rubik.Move
 
 /-!
 This file contains an algorithm which solves any Rubik's cube satisfying the relevant invariants. In
-particular, this allows us to show `isValid_iff_isSolvable`.
+particular, this allows us to show `isSolvable_iff_isValid`.
 
 The algorithm we implement is quite naive, compared to even the simplest methods employed by humans.
 This heavily cuts down on the amount of explicit computation that needs to be performed, at the cost
@@ -709,10 +709,10 @@ theorem IsValid.isSolvable (h : IsValid cube) : IsSolvable cube :=
   Rubik.isSolvable ⟨_, h⟩
 
 /-- A Rubik's cube is solvable iff it satisfies the invariant. -/
-theorem isValid_iff_isSolvable : IsValid cube ↔ IsSolvable cube :=
-  ⟨IsValid.isSolvable, IsSolvable.isValid⟩
+theorem isSolvable_iff_isValid : IsSolvable cube ↔ IsValid cube :=
+  ⟨IsSolvable.isValid, IsValid.isSolvable⟩
 
 instance : DecidablePred IsSolvable :=
-  fun _ ↦ decidable_of_iff _ isValid_iff_isSolvable
+  fun _ ↦ decidable_of_iff' _ isSolvable_iff_isValid
 
 end PRubik

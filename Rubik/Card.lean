@@ -1,6 +1,6 @@
 import Mathlib.GroupTheory.Coset.Card
 import Mathlib.GroupTheory.QuotientGroup.Basic
-import Rubik.PRubik
+import Rubik.Algorithm
 
 /-!
 We provide results on the cardinalities of our types. In particular, we count the number of
@@ -212,5 +212,10 @@ protected theorem card : Fintype.card Rubik = 43252003274489856000 := by
   · simp_rw [Nat.card_prod, Nat.card_eq_fintype_card, PRubik.card]
     simp
   · simp
+
+/-- `Rubik.card` stated in terms of the `IsSolvable` predicate. -/
+theorem card_solvable : Fintype.card { x : PRubik // x.IsSolvable } = 43252003274489856000 := by
+  simp_rw [PRubik.isSolvable_iff_isValid]
+  exact Rubik.card
 
 end Rubik

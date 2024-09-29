@@ -1,4 +1,3 @@
-import Rubik.Algorithm
 import Rubik.Card
 import Rubik.Stickers
 
