@@ -149,24 +149,34 @@ def kerEdgeCornerEquiv :
           ← edgeValue_eq_one] at h
         rwa [eq_comm, ← edgeValue_eq_neg_one (edgeEquiv_of_mem_ker_edgeCornerEquiv cube.2),
           ← Int.units_ne_iff_eq_neg]
-    · rw [coe_fn_mk]
+    · have hc := cornerEquiv_of_mem_ker_edgeCornerEquiv cube.2
+      rw [coe_fn_mk, eq_comm]
       split_ifs with h₁ h₂
-      · simp at h₁
-        sorry
-      · simp at h₁
-        simp at h₂
-        sorry
-      · simp at h₁
-        simp at h₂
-        sorry
-
-
+      · simp_rw [Function.comp_apply, ofAdd_eq_one] at h₁
+        rwa [cornerValue_eq_zero hc] at h₁
+      · simp_rw [Function.comp_apply, EmbeddingLike.apply_eq_iff_eq] at h₂
+        rwa [cornerValue_eq_one hc] at h₂
+      · simp_rw [Function.comp_apply, ofAdd_eq_one] at h₁
+        simp_rw [Function.comp_apply, EmbeddingLike.apply_eq_iff_eq] at h₂
+        rw [← cornerValue_eq_two hc]
+        exact ((ZMod.cases _).resolve_left h₁).resolve_left h₂
   · intro x
     ext y
-    · simp
-      sorry
-    · simp
-      sorry
+    · refine y.inductionOn ?_
+      intro e
+      simp_rw [edgeValue_mk, coe_fn_mk, ite_eq_then, EdgePiece.flip_ne, imp_false, not_not]
+      split_ifs with h
+      · rw [h]
+      · rw [← ne_eq, Int.units_ne_iff_eq_neg] at h
+        rw [h]
+    · refine y.inductionOn ?_
+      intro c
+      simp_rw [Function.comp_apply, cornerValue_mk, coe_fn_mk]
+      split_ifs with h₁ h₂
+      · simp [h₁]
+      · simp [h₂]
+      · rw [eq_comm]
+        simpa [mul_assoc] using ((ZMod.cases _).resolve_left h₁).resolve_left h₂
   · intro x y
     simp
     sorry

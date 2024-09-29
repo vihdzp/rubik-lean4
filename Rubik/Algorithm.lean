@@ -589,7 +589,6 @@ private theorem solveCornerPiecesAux_cornerPieceEquiv (cube : Rubik) (l : List C
     (hl : l.Nodup) (he : edgePieceEquiv cube = 1) (he' : cornerEquiv cube = 1)
     (hc : ∀ c, c ∈ l ↔ cornerValue cube c ≠ 0) :
     cornerPieceEquiv (PRubik.move (solveCornerPiecesAux cube l)) = cornerPieceEquiv cube⁻¹ :=
-  have H : ∀ x : ZMod 3, x = 0 ∨ x = 1 ∨ x = 2 := by decide
   match l with
   | [] => by
     simp_rw [List.not_mem_nil, false_iff, not_not] at hc
@@ -600,7 +599,7 @@ private theorem solveCornerPiecesAux_cornerPieceEquiv (cube : Rubik) (l : List C
     exact hc _
   | [a] => by
     apply (not_ne_iff.2 (Rubik.isValid cube).cornerRotation _).elim
-    obtain hx | hx | hx := H (PRubik.cornerValue cube a)
+    obtain hx | hx | hx := ZMod.cases (PRubik.cornerValue cube a)
     · cases (hc a).1 (List.mem_singleton_self a) hx
     · suffices cube = PRubik.rotateCorner a by
         rw [this, cornerRotation_rotateCorner]
@@ -638,7 +637,7 @@ private theorem solveCornerPiecesAux_cornerPieceEquiv (cube : Rubik) (l : List C
       · rw [cornerValue_mul_rotateCorners_of_ne _ hb ha, ← ne_eq, ← hc] at hc'
         simpa [ha, hb] using hc'
     · have h : cornerValue cube a = 2 := by
-        obtain hx | hx | hx := H (cornerValue cube a)
+        obtain hx | hx | hx := ZMod.cases (cornerValue cube a)
         · rw [← not_ne_iff, ← hc] at hx
           cases hx (List.mem_cons_self a _)
         · cases h hx

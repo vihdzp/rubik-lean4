@@ -20,6 +20,9 @@ def Units.toZMod (x : ℤˣ) : ZMod 2 :=
 theorem Units.toZMod_mul : ∀ x y : ℤˣ, (x * y).toZMod = x.toZMod + y.toZMod := by
   decide
 
+theorem ZMod.cases : ∀ x : ZMod 3, x = 0 ∨ x = 1 ∨ x = 2 := by
+  decide
+
 open Orientation Equiv
 
 /-- A pre-Rubik's cube. We represent this as a permutation of the edge pieces, and a permutation of
