@@ -40,9 +40,10 @@ theorem deduplicateCore_symm_symm (m : Moves) :
   · intro n a l ha IH
     have : 3 * 3 % 4 = 1 := rfl
     rw [symm_append, symm_append, deduplicateCore_append n ha, symm_replicate, symm_replicate,
-      deduplicateCore_append, IH, append_cancel_right_eq, ← mul_assoc, ← Nat.mod_mul_mod,
-      this, one_mul]
-    rwa [head?_symm, getLast?_symm]
+      deduplicateCore_append, IH, append_cancel_right_eq, replicate_inj]
+    · refine ⟨?_, Or.inr rfl⟩
+      omega
+    · rwa [head?_symm, getLast?_symm]
 
 theorem deduplicateCore_eq_or_length_lt (m : Moves) :
     deduplicateCore m = m ∨ (deduplicateCore m).length < m.length := by
@@ -141,6 +142,7 @@ def IsDeduplicated (m : Moves) : Prop :=
 instance : DecidablePred IsDeduplicated :=
   inferInstanceAs (DecidablePred (_ = ·))
 
+@[simp]
 theorem isDeduplicated_nil : IsDeduplicated [] :=
   rfl
 
@@ -162,14 +164,6 @@ theorem isDeduplicated_iff_deduplicate {m : Moves} : IsDeduplicated m ↔ dedupl
 
 alias ⟨IsDeduplicated.deduplicate_eq, _⟩ := isDeduplicated_iff_deduplicate
 
-theorem isDeduplicated_of_append_left {l m : Moves} (h : IsDeduplicated (l ++ m)) :
-    IsDeduplicated l := by
-  sorry
-
-theorem isDeduplicated_of_append_right {l m : Moves} (h : IsDeduplicated (l ++ m)) :
-    IsDeduplicated m := by
-  sorry
-
 theorem isDeduplicated_replicate_iff {n : ℕ} {a : Orientation} :
     IsDeduplicated (replicate n a) ↔ n ≤ 3 := by
   rw [IsDeduplicated, deduplicateCore_replicate, replicate_left_inj]
@@ -180,7 +174,80 @@ theorem isDeduplicated_append {n : ℕ} (hn : n ≤ 3) {a : Orientation}
     IsDeduplicated (replicate n a ++ m) := by
   rw [IsDeduplicated, deduplicateCore_append n ha, hm.deduplicateCore_eq,
     append_cancel_right_eq, replicate_inj, Nat.mod_succ_eq_iff_lt, Nat.lt_succ]
-  exact ⟨hn, Or.inr rfl⟩ 
+  exact ⟨hn, Or.inr rfl⟩
+
+theorem isDeduplicated_append_iff {n : ℕ} {a : Orientation} {m : Moves} (ha : a ∉ m.head?) :
+    IsDeduplicated (replicate n a ++ m) ↔ n ≤ 3 ∧ IsDeduplicated m := by
+  refine ⟨?_, fun ⟨hn, hm⟩ ↦ isDeduplicated_append hn hm ha⟩
+  intro h
+  rw [IsDeduplicated, deduplicateCore_append n ha] at h
+  apply_fun length at h
+  simp_rw [length_append, length_replicate] at h
+  obtain hm | hm := deduplicateCore_eq_or_length_lt m
+  · refine ⟨?_, hm⟩
+    rw [hm, add_left_inj] at h
+    omega
+  · cases (add_lt_add_of_le_of_lt (Nat.mod_le n 4) hm).ne h
+
+theorem le_three_of_isDeduplicated_append {n : ℕ} {a : Orientation} {m : Moves} :
+    IsDeduplicated (replicate n a ++ m) → n ≤ 3 := by
+  apply runLengthRecOn m
+  · intro h
+    rwa [append_nil, isDeduplicated_replicate_iff] at h
+  · intro m b l ha _ h
+    obtain rfl | hb := eq_or_ne a b
+    · rw [← append_assoc, ← replicate_add, isDeduplicated_append_iff ha] at h
+      exact (Nat.le_add_right _ _).trans h.1
+    · rw [isDeduplicated_append_iff] at h
+      · exact h.1
+      · rwa [head?_append_of_ne_nil, head?_replicate, if_neg m.ne_zero, Option.mem_some_iff,
+          eq_comm]
+        rw [ne_eq, replicate_eq_nil]
+        exact m.ne_zero
+
+alias IsDeduplicated.le_three := le_three_of_isDeduplicated_append
+
+theorem isDeduplicated_of_append_left {l m : Moves} : IsDeduplicated (l ++ m) →
+    IsDeduplicated l := by
+  apply runLengthRecOn l
+  · simp
+  · intro n a l ha IH hl
+    rw [isDeduplicated_append_iff ha]
+    rw [append_assoc] at hl
+    use hl.le_three
+    cases l with
+    | nil => exact isDeduplicated_nil
+    | cons b l =>
+      rw [isDeduplicated_append_iff] at hl
+      · exact IH hl.2
+      · simpa using ha
+
+theorem isDeduplicated_of_append_right {l m : Moves} : IsDeduplicated (l ++ m) →
+    IsDeduplicated m := by
+  apply runLengthRecOn l
+  · simp
+  · intro n a l ha IH hl
+    cases l with
+    | nil =>
+      rw [append_nil] at hl
+      revert hl
+      apply runLengthRecOn m
+      · exact fun _ ↦ isDeduplicated_nil
+      · intro k b m ha _ h
+        obtain rfl | hb' := eq_or_ne a b
+        · rw [← append_assoc, ← replicate_add, isDeduplicated_append_iff ha] at h
+          rw [isDeduplicated_append_iff ha]
+          exact ⟨(Nat.le_add_left _ _).trans h.1, h.2⟩
+        · rw [isDeduplicated_append_iff] at h
+          · exact h.2
+          · rwa [head?_append_of_ne_nil, head?_replicate, if_neg k.ne_zero, Option.mem_some_iff,
+              eq_comm]
+            rw [ne_eq, replicate_eq_nil]
+            exact k.ne_zero
+    | cons b l =>
+      rw [append_assoc, isDeduplicated_append_iff] at hl
+      · exact IH hl.2
+      · simpa using ha
 
 /-- Recursion on deduplicated sequences of moves. -/
 def isDeduplicatedRecOn {m : Moves} (hm : IsDeduplicated m) {p : Moves → Sort*} (hn : p [])
@@ -188,7 +255,7 @@ def isDeduplicatedRecOn {m : Moves} (hm : IsDeduplicated m) {p : Moves → Sort*
       p m → p (replicate n a ++ m)) : p m :=
   runLengthRecOn m (fun _ ↦ hn) (fun _ _ m ha (IH : _ → _) hm ↦
     have hm' : IsDeduplicated m := isDeduplicated_of_append_right hm
-    hi (isDeduplicated_replicate_iff.1 (isDeduplicated_of_append_left hm)) hm' ha (IH hm')) hm
+    hi (hm.le_three) hm' ha (IH hm')) hm
 
 @[simp]
 theorem isDeduplicatedRecOn_nil {p : Moves → Sort*} (hn : p [])
