@@ -1,13 +1,8 @@
-import Mathlib.Tactic.FinCases
 import Rubik.PRubik
-import Rubik.RunLength
 
 /-!
 We define the Rubik's cube corresponding to any given orientation. We use this to define
 `PRubik.move`, which applies any sequence of moves from the solved state.
-
-We also provide `Moves.deduplicate`, which can be used to remove "obvious redundancies" within a
-sequence of moves, in the form of a single face being turned four or more consecutive times.
 -/
 
 namespace PRubik
@@ -133,9 +128,9 @@ abbrev D' : Moves := D2 ++ Moves.D
 /-- Turn back face backwards. -/
 abbrev B' : Moves := B2 ++ Moves.B
 
-/-- Performs a sequence of moves in inverse order. -/
+/-- Performs a sequence of moves backwards, turning each face in the opposite direction. -/
 def symm : Moves → Moves
-  | [] => ∅
+  | [] => []
   | (a :: l) => symm l ++ [a, a, a]
 
 @[simp]
@@ -160,6 +155,7 @@ theorem symm_replicate (n : ℕ) (a : Orientation) : symm (replicate n a) = repl
     rw [replicate_succ, symm_cons, IH, mul_add, replicate_add]
     rfl
 
+-- TODO: PR to Lean 4
 theorem Option.or_some_right (a : Option α) (b : α) : a.or (some b) = a.getD b := by
   cases a <;> rfl
 
@@ -178,133 +174,7 @@ theorem getLast?_symm (m : Moves) : getLast? m.symm = head? m := by
     rw [symm_cons, getLast?_append, getLast?_cons_cons, getLast?_cons_cons, getLast?_singleton,
       Option.or_some, head?_cons]
 
-/-- Removes any instances of four consecutive rotations from a list of moves.
 
-Note that this might still contain four consecutive rotations, e.g.
-`deduplicateCore [L, L, F, F, F, F, L, L] = [L, L, L, L]`. -/
-def deduplicateCore (m : Moves) : Moves :=
-  runLengthRecOn m [] fun n a _ _ IH ↦ replicate (n % 4) a ++ IH
-
-@[simp]
-theorem deduplicateCore_nil : deduplicateCore [] = [] :=
-  rfl
-
-theorem deduplicateCore_append (n : ℕ) {a : Orientation} {m : Moves} (hm : a ∉ m.head?) :
-    deduplicateCore (replicate n a ++ m) = replicate (n % 4) a ++ deduplicateCore m := by
-  obtain rfl | hn := n.eq_zero_or_pos
-  · rfl
-  · exact runLengthRecOn_append hn hm _ _
-
-@[simp]
-theorem deduplicateCore_replicate (n : ℕ) (a : Orientation) :
-    deduplicateCore (replicate n a) = replicate (n % 4) a := by
-  convert deduplicateCore_append n (m := []) (Option.not_mem_none a) <;> simp
-
-@[simp]
-theorem deduplicateCore_symm_symm (m : Moves) :
-    deduplicateCore m.symm.symm = deduplicateCore m := by
-  apply runLengthRecOn m
-  · rfl
-  · intro n a l ha IH
-    have : 3 * 3 % 4 = 1 := rfl
-    rw [symm_append, symm_append, deduplicateCore_append n ha, symm_replicate, symm_replicate,
-      deduplicateCore_append, IH, append_cancel_right_eq, ← mul_assoc, ← Nat.mod_mul_mod,
-      this, one_mul]
-    rwa [head?_symm, getLast?_symm]
-
-theorem deduplicateCore_eq_or_length_lt (m : Moves) :
-    deduplicateCore m = m ∨ (deduplicateCore m).length < m.length := by
-  apply runLengthRecOn m
-  · exact Or.inl rfl
-  · intro n a l ha IH
-    rw [deduplicateCore_append n ha, length_append, length_append,
-      length_replicate, length_replicate]
-    obtain hn | hn := (Nat.mod_le n 4).lt_or_eq
-    · apply Or.inr (add_lt_add_of_lt_of_le hn _)
-      obtain hl | hl := IH
-      · rw [hl]
-      · exact hl.le
-    · rwa [hn, append_cancel_left_eq, add_lt_add_iff_left]
-
-theorem deduplicateCore_length_le (m : Moves) : (deduplicateCore m).length ≤ m.length := by
-  obtain h | h := deduplicateCore_eq_or_length_lt m
-  · rw [h]
-  · exact h.le
-
-/-- Recursively removes any instances of four consecutive rotations from a list of moves. -/
-def deduplicate (m : Moves) : Moves :=
-  let l := deduplicateCore m
-  if l = m then m else deduplicate l
-termination_by m.length
-decreasing_by apply (deduplicateCore_eq_or_length_lt m).resolve_left; assumption
-
-theorem deduplicate_of_eq (h : deduplicateCore m = m) : deduplicate m = m := by
-  rw [deduplicate]
-  exact if_pos h
-
-theorem deduplicate_of_ne (h : deduplicateCore m ≠ m) :
-    deduplicate m = deduplicate (deduplicateCore m) := by
-  rw [deduplicate]
-  exact if_neg h
-
-@[simp]
-theorem deduplicate_nil : deduplicate [] = [] :=
-  deduplicate_of_eq rfl
-
-theorem deduplicate_eq_iterate (m : Moves) : ∃ n, deduplicate m = deduplicateCore^[n] m := by
-  obtain h | h := eq_or_ne (deduplicateCore m) m
-  · use 1
-    rw [deduplicate_of_eq h, Function.iterate_one, h]
-  · have := (deduplicateCore_eq_or_length_lt m).resolve_left h
-    obtain ⟨n, hn⟩ := deduplicate_eq_iterate (deduplicateCore m)
-    use n + 1
-    rw [deduplicate_of_ne h, Function.iterate_succ_apply, hn]
-termination_by m.length
-
-@[simp]
-theorem deduplicate_deduplicateCore (m : Moves) :
-    deduplicate (deduplicateCore m) = deduplicate m := by
-  obtain h | h := eq_or_ne (deduplicateCore m) m
-  · rw [h]
-  · rw [deduplicate_of_ne h]
-
-@[simp]
-theorem deduplicateCore_deduplicate (m : Moves) :
-    deduplicateCore (deduplicate m) = deduplicate m := by
-  rw [deduplicate]
-  split_ifs with h
-  · exact h
-  · have := (deduplicateCore_eq_or_length_lt m).resolve_left h
-    exact deduplicateCore_deduplicate _
-termination_by m.length
-
-@[simp]
-theorem deduplicate_deduplicate (m : Moves) : deduplicate (deduplicate m) = deduplicate m :=
-  deduplicate_of_eq (deduplicateCore_deduplicate m)
-
-@[simp]
-theorem deduplicate_replicate (n : ℕ) : deduplicate (replicate n a) = replicate (n % 4) a := by
-  rw [← deduplicate_deduplicateCore, deduplicateCore_replicate, deduplicate_of_eq]
-  rw [deduplicateCore_replicate, Nat.mod_mod]
-
-@[simp]
-theorem deduplicate_symm_symm (m : Moves) : deduplicate m.symm.symm = deduplicate m := by
-  rw [← deduplicate_deduplicateCore, deduplicateCore_symm_symm, deduplicate_deduplicateCore]
-
-/-- Prints a (deduplicated) sequence of moves using Rubik's cube notation. -/
-private def toString (m : Moves) : Option Lean.Format :=
-  runLengthRecOn m.deduplicate none fun n a _ _ (IH : Option Lean.Format) ↦
-    let n := match n with
-      | 1 => ""
-      | 2 => "2"
-      | _ => "'"
-    let IH := match IH with
-      | none => Std.Format.text ""
-      | some x => " " ++ x
-    some (repr a ++ n ++ IH)
-
-instance : Repr Moves :=
-  ⟨fun m _ ↦ (toString m).getD "[]"⟩
 
 end Moves
 
@@ -356,23 +226,6 @@ theorem move_replicate (n : ℕ) (a : Orientation) :
   | n + 4 => by
     rw [List.replicate_add, move_append, Nat.add_mod_right, move_replicate, mul_right_eq_self]
     exact ofOrientation₄ a
-
-@[simp]
-theorem move_deduplicateCore (m : Moves) : move m.deduplicateCore = move m := by
-  apply List.runLengthRecOn m
-  · rfl
-  · intro n a l ha IH
-    rw [Moves.deduplicateCore_append n ha, move_append, move_append, IH]
-    conv_rhs => rw [move_replicate]
-
-@[simp]
-theorem move_deduplicate (m : Moves) : move m.deduplicate = move m := by
-  obtain ⟨n, hn⟩ := Moves.deduplicate_eq_iterate m
-  rw [hn]
-  clear hn
-  induction n with
-  | zero => rfl
-  | succ n IH => rw [Function.iterate_succ_apply', move_deduplicateCore, IH]
 
 /-- A Rubik's cube is solvable when there exists a sequence of moves that can assemble it from the
 solved state. See `isSolvable_iff` for the equivalence with being able to unscramble the cube.

@@ -3,7 +3,7 @@ Copyright (c) 2024 Violeta Hernández Palacios. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Violeta Hernández Palacios
 -/
-import Mathlib.Data.PNat.Defs
+import Mathlib.Data.PNat.Basic
 import Mathlib.Order.TypeTags
 import Rubik.Chain
 import Rubik.GroupBy
@@ -41,6 +41,10 @@ theorem runLength_nil : RunLength ([] : List α) = [] :=
 @[simp]
 theorem runLength_eq_nil {l : List α} : RunLength l = [] ↔ l = [] := by
   rw [RunLength, pmap_eq_nil, groupBy_eq_nil]
+
+@[simp]
+theorem runLength_singleton (a : α) : RunLength [a] = [(1, a)] := by
+  simp [RunLength]
 
 theorem runLength_append {n : ℕ} (hn : 0 < n) {a : α} {l : List α} (ha : a ∉ l.head?) :
     (replicate n a ++ l).RunLength = (⟨n, hn⟩, a) :: l.RunLength := by
@@ -182,5 +186,37 @@ theorem groupBy_beq (l : List α) :
       rw [getLast_replicate, beq_eq_false_iff_ne]
       rintro rfl
       exact ha (head_mem_head? _)
+
+theorem length_runLength_le (l : List α) : (RunLength l).length ≤ l.length := by
+  apply runLengthRecOn l
+  · rfl
+  · intro n a l ha IH
+    rw [runLength_append n.pos ha, length_cons, length_append, length_replicate, add_comm]
+    exact add_le_add n.one_le IH
+
+theorem length_runLength_append_le (l m : List α) :
+    (RunLength (l ++ m)).length ≤ (RunLength l).length + (RunLength m).length := by
+  apply runLengthRecOn l
+  · simp
+  · intro n a l ha IH
+    obtain rfl | hl := eq_or_ne l []
+    · rw [append_nil, runLength_replicate n.pos, length_singleton]
+      revert n
+      apply runLengthRecOn m
+      · simp
+      · intro n b m hb IH k
+        rw [runLength_append n.pos hb]
+        obtain rfl | h := eq_or_ne a b
+        · rw [← append_assoc, append_replicate_replicate]
+          apply (IH (k + n)).trans
+          simp
+        · rw [runLength_append k.pos, length_cons, runLength_append n.pos hb]
+          · simp [add_comm]
+          · rwa [head?_append, head?_replicate, if_neg n.ne_zero,
+              Option.or_some, Option.mem_some_iff, eq_comm]
+    · rwa [append_assoc, runLength_append n.pos, runLength_append n.pos ha,
+        length_cons, length_cons, Nat.add_assoc, Nat.add_comm 1, ← Nat.add_assoc,
+        Nat.add_le_add_iff_right]
+      rwa [head?_append, head?_eq_head hl, Option.or_some, ← head?_eq_head hl]
 
 end List

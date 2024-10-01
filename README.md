@@ -22,5 +22,6 @@ Each orientation can be assigned a particular `PRubik.ofOrientation` which corre
 There are various possible ways this project could be expanded upon or generalized:
 
 - Solving smaller (2 × 2 × 2) or larger Rubik's cubes 
-- Solving other twisty puzzles, like the megaminx, pyraminx, ...
-- Solving higher-dimensional Rubik's cubes
+- Solving other twisty puzzles, like the [pyraminx](https://en.wikipedia.org/wiki/Pyraminx), [megaminx](https://en.wikipedia.org/wiki/Megaminx), ...
+- Solving [higher-dimensional](https://superliminal.com/cube) Rubik's cubes
+- Finding bounds on [God's number](https://cube20.org)

@@ -234,4 +234,8 @@ theorem groupBy_eq_iff {r : α → α → Bool} {l : List (List α)} :
   · rintro ⟨rfl, hn, hc, hc'⟩
     exact groupBy_join hn hc hc'
 
+@[simp]
+theorem groupBy_singleton (a : α) : groupBy r [a] = [[a]] :=
+  groupBy_append (cons_ne_nil a _) (chain'_singleton a) fun h ↦ (h rfl).elim
+
 end List
