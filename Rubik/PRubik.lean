@@ -40,12 +40,13 @@ structure PRubik : Type where
   edge_flip (e : EdgePiece) : edgePieceEquiv e.flip = (edgePieceEquiv e).flip
   /-- Pieces in the same corner get mapped to pieces in the same corner. -/
   corner_cyclic (c : CornerPiece) : cornerPieceEquiv c.cyclic = (cornerPieceEquiv c).cyclic
+deriving instance Fintype for PRubik
 
 attribute [simp] PRubik.edge_flip PRubik.corner_cyclic
 
 namespace PRubik
 
-deriving instance Fintype for PRubik
+variable {cube₁ cube₂ cube : PRubik}
 
 theorem edge_flip' (cube : PRubik) (e : EdgePiece) :
     cube.edgePieceEquiv e = (cube.edgePieceEquiv e.flip).flip :=
@@ -56,7 +57,7 @@ theorem corner_cyclic' (cube : PRubik) (c : CornerPiece) :
   cube.corner_cyclic c.cyclic.cyclic
 
 @[ext]
-theorem ext (cube₁ cube₂ : PRubik)
+theorem ext
     (he : ∀ e, cube₁.edgePieceEquiv e = cube₂.edgePieceEquiv e)
     (hc : ∀ c, cube₁.cornerPieceEquiv c = cube₂.cornerPieceEquiv c) :
     cube₁ = cube₂ := by
@@ -286,11 +287,11 @@ theorem edgeValue_mk (cube : PRubik) (e : EdgePiece) :
     edgeValue cube ⟦e⟧ = if cube.edgePieceEquiv e = e then 1 else -1 :=
   rfl
 
-theorem edgeValue_eq_one {cube : PRubik} {e : EdgePiece} :
+theorem edgeValue_eq_one {e : EdgePiece} :
     edgeValue cube ⟦e⟧ = 1 ↔ cube.edgePieceEquiv e = e := by
   simp [edgeValue_mk]
 
-theorem edgeValue_eq_neg_one' {cube : PRubik} {e : EdgePiece} :
+theorem edgeValue_eq_neg_one' {e : EdgePiece} :
     edgeValue cube ⟦e⟧ = -1 ↔ cube.edgePieceEquiv e ≠ e := by
   simp [edgeValue_mk]
 
@@ -372,7 +373,7 @@ def parity : PRubik →* ℤˣ :=
   Perm.sign.comp edgeEquiv * Perm.sign.comp cornerEquiv
 
 /-- The Rubik's cube with a single edge swapped with its counterclockwise edge in the same face. -/
-def swapEdges (h : IsAdjacent a b) : PRubik where
+def swapEdges {a b : Orientation} (h : IsAdjacent a b) : PRubik where
   edgePieceEquiv := (swap ⟨a, b, h⟩ ⟨a, cross a b, h.cross_left.symm⟩).trans
     (swap ⟨b, a, h.symm⟩ ⟨cross a b, a, h.cross_left⟩)
   cornerPieceEquiv := 1
@@ -382,7 +383,8 @@ def swapEdges (h : IsAdjacent a b) : PRubik where
   corner_cyclic _ := rfl
 
 @[simp]
-theorem parity_swapEdges : ∀ {a b} (h : IsAdjacent a b), parity (swapEdges h) = -1 := by
+theorem parity_swapEdges : ∀ {a b : Orientation} (h : IsAdjacent a b),
+    parity (swapEdges h) = -1 := by
   decide
 
 /-- The parity of flipped edges in a Rubik's cube can be measured as the parity of the edge piece
@@ -408,7 +410,7 @@ theorem cornerPieceEquiv_flipEdge (e : Edge) : cornerPieceEquiv (flipEdge e) = 1
   rfl
 
 @[simp]
-theorem edgeFlip_flipEdge : ∀ e, edgeFlip (flipEdge e) = -1 := by
+theorem edgeFlip_flipEdge : ∀ e : Edge, edgeFlip (flipEdge e) = -1 := by
   decide
 
 theorem cornerPieceEquiv_value (cube : PRubik) (c : CornerPiece) (a : Axis) :
@@ -429,9 +431,9 @@ theorem cornerPieceEquiv_value (cube : PRubik) (c : CornerPiece) (a : Axis) :
     simp
 
 private theorem cornerRotationAux (cube₁ cube₂ : PRubik) (c : Corner) (a : Axis) :
-    (cube₁.cornerPieceEquiv (cube₂.cornerPieceEquiv (c.toCornerPiece a))).value a
-    = (cube₁.cornerPieceEquiv ((cornerEquiv cube₂ c).toCornerPiece a)).value a
-    + (cube₂.cornerPieceEquiv (c.toCornerPiece a)).value a := by
+    (cube₁.cornerPieceEquiv (cube₂.cornerPieceEquiv (c.toCornerPiece a))).value a =
+      (cube₁.cornerPieceEquiv ((cornerEquiv cube₂ c).toCornerPiece a)).value a +
+      (cube₂.cornerPieceEquiv (c.toCornerPiece a)).value a := by
   refine Quotient.inductionOn c ?_
   intro c
   dsimp [cornerEquiv_mk]

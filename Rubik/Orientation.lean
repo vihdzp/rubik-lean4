@@ -38,6 +38,8 @@ deriving instance DecidableEq, Fintype for Axis
 
 namespace Axis
 
+variable {a b c : Axis}
+
 instance : Repr Axis := ⟨fun e _ ↦ Std.Format.text <| match e with
   | Axis.x => "X"
   | Axis.y => "Y"
@@ -77,14 +79,14 @@ theorem other_self : ∀ a, other a a = a := by
   decide
 
 @[simp]
-theorem other_eq_left_iff : ∀ {a b}, other a b = a ↔ a = b := by
+theorem other_eq_left_iff : ∀ {a b : Axis}, other a b = a ↔ a = b := by
   decide
 
 @[simp]
-theorem other_eq_right_iff : ∀ {a b}, other a b = b ↔ a = b := by
+theorem other_eq_right_iff : ∀ {a b : Axis}, other a b = b ↔ a = b := by
   decide
 
-theorem other_eq_iff : ∀ {a b c}, a ≠ b → (other a b = c ↔ c ≠ a ∧ c ≠ b) := by
+theorem other_eq_iff : ∀ {a b c : Axis}, a ≠ b → (other a b = c ↔ c ≠ a ∧ c ≠ b) := by
   decide
 
 theorem other_eq (h₁ : a ≠ b) (h₂ : c ≠ a) (h₃ : c ≠ b) : other a b = c :=
@@ -93,7 +95,7 @@ theorem other_eq (h₁ : a ≠ b) (h₂ : c ≠ a) (h₃ : c ≠ b) : other a b 
 theorem other_ne_iff (h : a ≠ b) : other a b ≠ c ↔ c = a ∨ c = b := by
   rw [← not_iff_not, not_ne_iff, other_eq_iff h, not_or]
 
-theorem other_comm : ∀ a b, other a b = other b a := by
+theorem other_comm : ∀ a b : Axis, other a b = other b a := by
   decide
 
 theorem other_ne_left (h : a ≠ b) : other a b ≠ a :=
@@ -103,11 +105,11 @@ theorem other_ne_right (h : a ≠ b) : other a b ≠ b :=
   ((other_eq_iff h).1 rfl).2
 
 @[simp]
-theorem other_other_left : ∀ {a b}, other (other a b) a = b := by
+theorem other_other_left : ∀ {a b : Axis}, other (other a b) a = b := by
   decide
 
 @[simp]
-theorem other_other_right : ∀ {a b}, other (other a b) b = a := by
+theorem other_other_right : ∀ {a b : Axis}, other (other a b) b = a := by
   decide
 
 @[simp]
@@ -119,7 +121,7 @@ theorem other_other_right' : other b (other a b) = a := by
   rw [other_comm, other_other_right]
 
 @[simp]
-theorem other_inj_left : ∀ {a b c}, other c a = other c b ↔ a = b := by
+theorem other_inj_left : ∀ {a b c : Axis}, other c a = other c b ↔ a = b := by
   decide
 
 @[simp]
@@ -157,6 +159,8 @@ This type will also be used for the colors in a Rubik's cube, using the followin
 def Orientation : Type := Bool × Axis
 
 namespace Orientation
+
+variable {a b c r : Orientation}
 
 instance : Inhabited Orientation :=
   ⟨(true, Axis.x)⟩
@@ -336,10 +340,10 @@ The reason this is inverted is so that
 def rotate (a r : Orientation) : Orientation :=
   if r.axis = a.axis then a else cross r a
 
-theorem rotate_of_eq {a r : Orientation} (h : r.axis = a.axis) : a.rotate r = a :=
+theorem rotate_of_eq (h : r.axis = a.axis) : a.rotate r = a :=
   dif_pos h
 
-theorem rotate_of_ne {a r : Orientation} (h : r.axis ≠ a.axis) : a.rotate r = cross r a :=
+theorem rotate_of_ne (h : r.axis ≠ a.axis) : a.rotate r = cross r a :=
   dif_neg h
 
 @[simp]
@@ -349,14 +353,14 @@ theorem rotate_neg : rotate (-a) r = -rotate a r := by
   · rwa [rotate_of_ne h, rotate_of_ne, cross_neg_right]
 
 @[simp]
-theorem rotate_inj : ∀ {a b r}, rotate a r = rotate b r ↔ a = b := by
+theorem rotate_inj : ∀ {a b r : Orientation}, rotate a r = rotate b r ↔ a = b := by
   decide
 
 theorem isAdjacent_rotate : ∀ {a b r : Orientation},
     IsAdjacent (a.rotate r) (b.rotate r) ↔ IsAdjacent a b := by
   decide
 
-theorem IsAdjacent.rotate {a b : Orientation} (h : IsAdjacent a b) (r : Orientation) :
+theorem IsAdjacent.rotate (h : IsAdjacent a b) (r : Orientation) :
     IsAdjacent (a.rotate r) (b.rotate r) :=
   isAdjacent_rotate.2 h
 
@@ -368,7 +372,7 @@ a corner without dissassembling it. -/
 def IsAdjacent₃ (a b c : Orientation) : Prop :=
   IsAdjacent a b ∧ c = cross a b
 
-instance IsAdjacent₃.decRel : ∀ a b c, Decidable (IsAdjacent₃ a b c) :=
+instance IsAdjacent₃.decRel : ∀ a b c : Orientation, Decidable (IsAdjacent₃ a b c) :=
   inferInstanceAs (∀ a b c, Decidable (IsAdjacent a b ∧ c = cross a b))
 
 theorem IsAdjacent₃.isAdjacent (h : IsAdjacent₃ a b c) : IsAdjacent a b :=
@@ -380,7 +384,8 @@ theorem IsAdjacent₃.eq_cross (h : IsAdjacent₃ a b c) : c = cross a b :=
 theorem IsAdjacent.isAdjacent₃ (h : IsAdjacent a b) : IsAdjacent₃ a b (cross a b) :=
   ⟨h, rfl⟩
 
-theorem IsAdjacent₃.congr (h₁ : IsAdjacent₃ a b c₁) (h₂ : IsAdjacent₃ a b c₂) : c₁ = c₂ :=
+theorem IsAdjacent₃.congr {c₁ c₂ : Orientation}
+    (h₁ : IsAdjacent₃ a b c₁) (h₂ : IsAdjacent₃ a b c₂) : c₁ = c₂ :=
   h₁.2.trans h₂.2.symm
 
 theorem isAdjacent₃_cyclic : IsAdjacent₃ a b c ↔ IsAdjacent₃ b c a := by
@@ -398,7 +403,7 @@ theorem cross_rotate : ∀ {a b r : Orientation},
     IsAdjacent a b → cross (a.rotate r) (b.rotate r) = (cross a b).rotate r := by
   decide
 
-theorem isAdjacent₃_rotate {a b c r : Orientation} :
+theorem isAdjacent₃_rotate :
     IsAdjacent₃ (a.rotate r) (b.rotate r) (c.rotate r) ↔ IsAdjacent₃ a b c := by
   constructor
   · rintro ⟨h, hr⟩
@@ -408,7 +413,7 @@ theorem isAdjacent₃_rotate {a b c r : Orientation} :
   · rintro ⟨h, rfl⟩
     exact ⟨h.rotate r, (cross_rotate h).symm⟩
 
-theorem IsAdjacent₃.rotate {a b c : Orientation} (h : IsAdjacent₃ a b c) (r : Orientation) :
+theorem IsAdjacent₃.rotate (h : IsAdjacent₃ a b c) (r : Orientation) :
     IsAdjacent₃ (a.rotate r) (b.rotate r) (c.rotate r) :=
   isAdjacent₃_rotate.2 h
 

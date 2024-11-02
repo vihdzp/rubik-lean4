@@ -49,7 +49,8 @@ def ofOrientation (r : Orientation) : PRubik where
     rfl
 
 @[simp]
-theorem ofOrientation_inj : ∀ {r₁ r₂}, ofOrientation r₁ = ofOrientation r₂ ↔ r₁ = r₂ := by
+theorem ofOrientation_inj : ∀ {r₁ r₂ : Orientation},
+    ofOrientation r₁ = ofOrientation r₂ ↔ r₁ = r₂ := by
   decide
 
 @[simp]
@@ -64,15 +65,15 @@ theorem ofOrientation_inv (r : Orientation) : (ofOrientation r)⁻¹ = ofOrienta
   rw [inv_eq_iff_mul_eq_one, ← pow_succ', ofOrientation₄]
 
 @[simp]
-theorem parity_ofOrientation : ∀ r, parity (ofOrientation r) = 1 := by
+theorem parity_ofOrientation : ∀ r : Orientation, parity (ofOrientation r) = 1 := by
   decide
 
 @[simp]
-theorem edgeFlip_ofOrientation : ∀ r, edgeFlip (ofOrientation r) = 1 := by
+theorem edgeFlip_ofOrientation : ∀ r : Orientation, edgeFlip (ofOrientation r) = 1 := by
   decide
 
 @[simp]
-theorem cornerRotation_ofOrientation : ∀ r, cornerRotation (ofOrientation r) = 1 := by
+theorem cornerRotation_ofOrientation : ∀ r : Orientation, cornerRotation (ofOrientation r) = 1 := by
   decide
 
 /-- A single rotation is always a valid move. -/
@@ -90,6 +91,8 @@ abbrev Moves : Type := List Orientation
 namespace Moves
 
 open List
+
+variable {m : Moves}
 
 /-- Turn right face. -/
 protected abbrev R : Moves := [Orientation.R]
@@ -160,7 +163,8 @@ theorem symm_replicate (n : ℕ) (a : Orientation) : symm (replicate n a) = repl
     rw [replicate_succ, symm_cons, IH, mul_add, replicate_add]
     rfl
 
-theorem Option.or_some_right (a : Option α) (b : α) : a.or (some b) = a.getD b := by
+@[simp]
+theorem _root_.Option.or_some_right {α} (a : Option α) (b : α) : a.or (some b) = a.getD b := by
   cases a <;> rfl
 
 @[simp]
@@ -283,7 +287,8 @@ theorem deduplicate_deduplicate (m : Moves) : deduplicate (deduplicate m) = dedu
   deduplicate_of_eq (deduplicateCore_deduplicate m)
 
 @[simp]
-theorem deduplicate_replicate (n : ℕ) : deduplicate (replicate n a) = replicate (n % 4) a := by
+theorem deduplicate_replicate (n : ℕ) (a : Orientation) :
+    deduplicate (replicate n a) = replicate (n % 4) a := by
   rw [← deduplicate_deduplicateCore, deduplicateCore_replicate, deduplicate_of_eq]
   rw [deduplicateCore_replicate, Nat.mod_mod]
 
@@ -373,6 +378,8 @@ theorem move_deduplicate (m : Moves) : move m.deduplicate = move m := by
   induction n with
   | zero => rfl
   | succ n IH => rw [Function.iterate_succ_apply', move_deduplicateCore, IH]
+
+variable {cube₁ cube₂ cube : PRubik}
 
 /-- A Rubik's cube is solvable when there exists a sequence of moves that can assemble it from the
 solved state. See `isSolvable_iff` for the equivalence with being able to unscramble the cube.

@@ -2,7 +2,12 @@ import Lake
 open Lake DSL
 
 package "rubik" where
-  -- add package configuration options here
+  leanOptions := #[
+    ⟨`pp.unicode.fun, true⟩,
+    ⟨`pp.proofs.withType, false⟩,
+    ⟨`autoImplicit, false⟩,
+    ⟨`relaxedAutoImplicit, false⟩
+  ]
 
 lean_lib «Rubik» where
   -- add library configuration options here

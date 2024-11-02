@@ -20,6 +20,8 @@ for details on this assignment.
 relation of being in the same edge or corner. As expected, there are 8 `Edge`s and 12 `Corner`s.
 -/
 
+variable {a b c : Orientation}
+
 open Orientation
 
 /-- An edge piece is an ordered pair of adjacent orientations.
@@ -46,6 +48,8 @@ deriving instance DecidableEq, Fintype for EdgePiece
 
 namespace EdgePiece
 
+variable {e₁ e₂ : EdgePiece}
+
 instance : Inhabited EdgePiece :=
   ⟨EdgePiece.mk U B (by decide)⟩
 
@@ -56,12 +60,12 @@ protected theorem ne (e : EdgePiece) : e.fst ≠ e.snd :=
   e.isAdjacent.ne
 
 -- Not marked as `ext` since it creates undesirable goals with `PRubik.ext`.
-theorem ext {e₁ e₂ : EdgePiece} (hf : e₁.fst = e₂.fst) (hs : e₁.snd = e₂.snd) : e₁ = e₂ := by
+theorem ext (hf : e₁.fst = e₂.fst) (hs : e₁.snd = e₂.snd) : e₁ = e₂ := by
   cases e₁
   cases e₂
   simpa using ⟨hf, hs⟩
 
-theorem ext_iff {e₁ e₂ : EdgePiece} : e₁ = e₂ ↔ e₁.fst = e₂.fst ∧ e₁.snd = e₂.snd := by
+theorem ext_iff : e₁ = e₂ ↔ e₁.fst = e₂.fst ∧ e₁.snd = e₂.snd := by
   constructor
   · rintro rfl
     exact ⟨rfl, rfl⟩
@@ -97,7 +101,7 @@ theorem flip₂ (e : EdgePiece) : e.flip.flip = e :=
   rfl
 
 @[simp]
-theorem flip_inj {e₁ e₂ : EdgePiece} : e₁.flip = e₂.flip ↔ e₁ = e₂ :=
+theorem flip_inj : e₁.flip = e₂.flip ↔ e₁ = e₂ :=
   (Function.LeftInverse.injective flip₂).eq_iff
 
 @[simp]
@@ -154,17 +158,12 @@ instance : Setoid EdgePiece where
     · exact Eq.symm
     · exact Eq.trans
 
-theorem equiv_def {e₁ e₂ : EdgePiece} : e₁ ≈ e₂ ↔ e₁.toFinset = e₂.toFinset :=
+theorem equiv_def : e₁ ≈ e₂ ↔ e₁.toFinset = e₂.toFinset :=
   Iff.rfl
 
 theorem equiv_iff : ∀ {e₁ e₂ : EdgePiece}, e₁ ≈ e₂ ↔ e₁ = e₂ ∨ e₁ = e₂.flip := by
   simp_rw [equiv_def]
   decide
-
--- TODO: change to this once `perm_pair_iff` drops.
-/-simp_rw [equiv_def, ← Finset.val_inj, toFinset_val, EdgePiece.ext_iff]
-change Multiset.ofList _ = Multiset.ofList _ ↔ _
-simp-/
 
 instance : DecidableRel (α := EdgePiece) (· ≈ ·) :=
   fun _ _ ↦ decidable_of_iff _ equiv_iff.symm
@@ -316,16 +315,17 @@ deriving instance DecidableEq for CornerPiece
 
 namespace CornerPiece
 
+variable {c₁ c₂ : CornerPiece}
+
 -- Not marked as `ext` since it creates undesirable goals with `PRubik.ext`.
-theorem ext {c₁ c₂ : CornerPiece}
-    (hf : c₁.fst = c₂.fst) (hs : c₁.snd = c₂.snd) : c₁ = c₂ := by
+theorem ext (hf : c₁.fst = c₂.fst) (hs : c₁.snd = c₂.snd) : c₁ = c₂ := by
   obtain ⟨f₁, s₁, t₁, h₁⟩ := c₁
   obtain ⟨f₂, s₂, t₂, h₂⟩ := c₂
   dsimp at *
   subst hf hs
   simpa using h₁.congr h₂
 
-theorem ext_iff {c₁ c₂ : CornerPiece} : c₁ = c₂ ↔ c₁.fst = c₂.fst ∧ c₁.snd = c₂.snd := by
+theorem ext_iff : c₁ = c₂ ↔ c₁.fst = c₂.fst ∧ c₁.snd = c₂.snd := by
   constructor
   · rintro rfl
     exact ⟨rfl, rfl⟩
@@ -387,7 +387,7 @@ theorem cyclic₃ (c : CornerPiece) : c.cyclic.cyclic.cyclic = c :=
   rfl
 
 @[simp]
-theorem cyclic_inj {c₁ c₂ : CornerPiece} : c₁.cyclic = c₂.cyclic ↔ c₁ = c₂ := by
+theorem cyclic_inj  : c₁.cyclic = c₂.cyclic ↔ c₁ = c₂ := by
   constructor
   · exact congr_arg (cyclic ∘ cyclic)
   · rintro rfl
@@ -456,14 +456,14 @@ a specific face towards its corresponding axis. -/
 def value (c : CornerPiece) (a : Axis) : ZMod 3 :=
   if c.fst.axis = a then 0 else if c.thd.axis = a then 1 else 2
 
-theorem value_of_fst {c : CornerPiece} (h : c.fst.axis = a) : c.value a = 0 :=
+theorem value_of_fst {c : CornerPiece} {a : Axis} (h : c.fst.axis = a) : c.value a = 0 :=
   if_pos h
 
-theorem value_of_snd {c : CornerPiece} (h : c.snd.axis = a) : c.value a = 2 := by
+theorem value_of_snd {c : CornerPiece} {a : Axis} (h : c.snd.axis = a) : c.value a = 2 := by
   have : c.thd.axis ≠ a := (h.symm.trans_ne c.cyclic.isAdjacent).symm
   rw [value, if_neg (ne_of_ne_of_eq c.isAdjacent h), if_neg this]
 
-theorem value_of_thd {c : CornerPiece} (h : c.thd.axis = a) : c.value a = 1 := by
+theorem value_of_thd {c : CornerPiece} {a : Axis} (h : c.thd.axis = a) : c.value a = 1 := by
   have : c.fst.axis ≠ a := (h.symm.trans_ne c.cyclic.cyclic.isAdjacent).symm
   rw [value, if_neg this, if_pos h]
 
@@ -493,7 +493,7 @@ instance : Setoid CornerPiece where
     · exact Eq.symm
     · exact Eq.trans
 
-theorem equiv_def {c₁ c₂ : CornerPiece} : c₁ ≈ c₂ ↔ c₁.toFinset = c₂.toFinset :=
+theorem equiv_def : c₁ ≈ c₂ ↔ c₁.toFinset = c₂.toFinset :=
   Iff.rfl
 
 theorem equiv_iff : ∀ {c₁ c₂ : CornerPiece},
@@ -501,8 +501,7 @@ theorem equiv_iff : ∀ {c₁ c₂ : CornerPiece},
   simp_rw [equiv_def]
   decide
 
-theorem equiv_iff' {c₁ c₂ : CornerPiece} :
-    c₁ ≈ c₂ ↔ c₁ = c₂ ∨ c₁ = c₂.cyclic ∨ c₁ = c₂.cyclic.cyclic := by
+theorem equiv_iff' : c₁ ≈ c₂ ↔ c₁ = c₂ ∨ c₁ = c₂.cyclic ∨ c₁ = c₂.cyclic.cyclic := by
   rw [equiv_iff]
   convert Iff.rfl using 3
   rw [← cyclic_inj, cyclic₃]
@@ -520,14 +519,14 @@ theorem withAxis_equiv (c : CornerPiece) (a : Axis) : c.withAxis a ≈ c := by
   · exact cyclic_equiv c
   · exact (cyclic_equiv _).trans (cyclic_equiv c)
 
-theorem withAxis_eq_of_equiv {c₁ c₂ : CornerPiece} (h : c₁ ≈ c₂) (a : Axis) :
+theorem withAxis_eq_of_equiv (h : c₁ ≈ c₂) (a : Axis) :
     c₁.withAxis a = c₂.withAxis a := by
   obtain rfl | rfl | rfl := equiv_iff.1 h
   · rfl
   · rw [withAxis_cyclic]
   · rw [withAxis_cyclic]
 
-theorem value_eq_iff_of_equiv {c₁ c₂ : CornerPiece} {a : Axis} (hc : c₁ ≈ c₂)
+theorem value_eq_iff_of_equiv {a : Axis} (hc : c₁ ≈ c₂)
     : c₁.value a = c₂.value a ↔ c₁ = c₂ := by
   refine ⟨fun h ↦ ?_, fun h ↦ congr_arg (fun x ↦ x.value a) h⟩
   rw [equiv_iff] at hc

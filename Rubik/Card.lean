@@ -50,11 +50,11 @@ theorem mem_ker_edgeCornerEquiv {cube : PRubik} :
     cube ∈ edgeCornerEquiv.ker ↔ edgeEquiv cube = 1 ∧ cornerEquiv cube = 1 := by
   rw [MonoidHom.mem_ker, edgeCornerEquiv_apply, Prod.mk_eq_one]
 
-theorem edgeEquiv_of_mem_ker_edgeCornerEquiv (h : cube ∈ edgeCornerEquiv.ker) :
+theorem edgeEquiv_of_mem_ker_edgeCornerEquiv {cube : PRubik} (h : cube ∈ edgeCornerEquiv.ker) :
     edgeEquiv cube = 1 :=
   (mem_ker_edgeCornerEquiv.1 h).1
 
-theorem cornerEquiv_of_mem_ker_edgeCornerEquiv (h : cube ∈ edgeCornerEquiv.ker) :
+theorem cornerEquiv_of_mem_ker_edgeCornerEquiv {cube : PRubik} (h : cube ∈ edgeCornerEquiv.ker) :
     cornerEquiv cube = 1 :=
   (mem_ker_edgeCornerEquiv.1 h).2
 

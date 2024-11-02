@@ -174,7 +174,7 @@ no duplicate pieces. -/
 def IsProper (l : Stickers) : Prop :=
   ∃ h : IsAdjacent l, Function.Surjective (edgePieces l h) ∧ Function.Surjective (cornerPieces l h)
 
-theorem IsProper.isAdjacent (h : IsProper l) : IsAdjacent l := by
+theorem IsProper.isAdjacent {l : Stickers} (h : IsProper l) : IsAdjacent l := by
   obtain ⟨h, _⟩ := h
   exact h
 
@@ -209,7 +209,6 @@ def toStickers (cube : PRubik) : Stickers :=
   let c := #v[CornerPiece.mk' U B L, CornerPiece.mk' U R B, CornerPiece.mk' U L F,
     CornerPiece.mk' U F R, CornerPiece.mk' D L B, CornerPiece.mk' D B R,
     CornerPiece.mk' D F L, CornerPiece.mk' D R F].map cube.cornerPieceEquiv
-  -- rfl, and by extension vector notation, doesn't seem to work with this.
   ⟨#[
     c[0].fst, e[0].fst, c[1].fst,
     e[1].fst,           e[2].fst,
@@ -228,7 +227,7 @@ def toStickers (cube : PRubik) : Stickers :=
     c[4].fst, e[8].fst, c[5].fst,
     c[4].thd, e[8].snd, c[5].snd,
     e[4].snd,           e[7].snd,
-    c[0].snd, e[0].snd, c[1].thd], by simp⟩
+    c[0].snd, e[0].snd, c[1].thd], rfl⟩
 
 instance : Repr PRubik :=
   ⟨fun c ↦ reprPrec c.toStickers⟩

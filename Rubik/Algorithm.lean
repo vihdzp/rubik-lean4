@@ -96,7 +96,8 @@ def fixEdges (e₁ e₂ : Edge) : Moves :=
   let m := fixEdge e₁ ++ Moves.U
   m ++ fixEdge ((edgeEquiv (move m)).symm e₂)
 
-theorem fixEdges_move₁ (h : e₁ ≠ e₂) : edgeEquiv (move (fixEdges e₁ e₂)) (Edge.mk U B) = e₁ := by
+theorem fixEdges_move₁ {e₁ e₂ : Edge} (h : e₁ ≠ e₂) :
+    edgeEquiv (move (fixEdges e₁ e₂)) (Edge.mk U B) = e₁ := by
   have : edgeEquiv (ofOrientation U) (Edge.mk U B) = Edge.mk U L := by decide
   simp [fixEdges]
   rw [fixEdge_fix, this, fixEdge_move]
@@ -141,7 +142,7 @@ private theorem cornerEquiv_UBL :
     (cornerEquiv (ofOrientation U)) (Corner.mk U B L) = Corner.mk U L F :=
   rfl
 
-theorem fixCorners₂_move₁ (h : c₁ ≠ c₂) :
+theorem fixCorners₂_move₁ {c₁ c₂ : Corner} (h : c₁ ≠ c₂) :
     cornerEquiv (move (fixCorners₂ c₁ c₂)) (Corner.mk U B L) = c₁ := by
   simp [fixCorners₂]
   rw [fixCorner_fix₂, cornerEquiv_UBL, fixCorner_move]
@@ -158,14 +159,14 @@ def fixCorners₃ (c₁ c₂ c₃ : Corner) : Moves :=
   let m := fixCorners₂ c₁ c₂ ++ Moves.U
   m ++ fixCorner ((cornerEquiv (move m)).symm c₃)
 
-theorem fixCorners₃_move₁ (h₁ : c₁ ≠ c₂) (h₂ : c₁ ≠ c₃) :
+theorem fixCorners₃_move₁ {c₁ c₂ c₃ : Corner} (h₁ : c₁ ≠ c₂) (h₂ : c₁ ≠ c₃) :
     cornerEquiv (move (fixCorners₃ c₁ c₂ c₃)) (Corner.mk U R B) = c₁ := by
   have : (cornerEquiv (ofOrientation U)) (Corner.mk U R B) = Corner.mk U B L := by decide
   simp [fixCorners₃]
   rw [fixCorner_fix₁, this, fixCorners₂_move₁ h₁]
   rwa [ne_eq, Equiv.symm_apply_eq, this, Equiv.symm_apply_eq, fixCorners₂_move₁ h₁, eq_comm]
 
-theorem fixCorners₃_move₂ (c₁ : Corner) (h : c₂ ≠ c₃) :
+theorem fixCorners₃_move₂ (c₁ : Corner) {c₂ c₃ : Corner} (h : c₂ ≠ c₃) :
     cornerEquiv (move (fixCorners₃ c₁ c₂ c₃)) (Corner.mk U B L) = c₂ := by
   simp [fixCorners₃]
   rw [fixCorner_fix₂, cornerEquiv_UBL, fixCorners₂_move₂]
@@ -193,7 +194,8 @@ def swapEdges (e₁ e₂ : Edge) : Moves :=
     m ++ swapEdgesAux ++ m.symm
 
 @[simp]
-theorem edgeEquiv_swapEdges : edgeEquiv (move (swapEdges e₁ e₂)) = Equiv.swap e₁ e₂ := by
+theorem edgeEquiv_swapEdges {e₁ e₂ : Edge} :
+    edgeEquiv (move (swapEdges e₁ e₂)) = Equiv.swap e₁ e₂ := by
   rw [swapEdges]
   split_ifs with h
   · rw [h, Equiv.swap_self, move_nil, edgeEquiv_one]
@@ -217,7 +219,7 @@ def flipEdges (e₁ e₂ : Edge) : Moves :=
     m ++ flipEdgesAux ++ m.symm
 
 @[simp]
-theorem edgePieceEquiv_flipEdges :
+theorem edgePieceEquiv_flipEdges {e₁ e₂ : Edge} :
     edgePieceEquiv (move (flipEdges e₁ e₂)) = e₁.flipEquiv * e₂.flipEquiv := by
   rw [flipEdges]
   split_ifs with h
@@ -233,7 +235,7 @@ theorem edgePieceEquiv_flipEdges :
       rfl
 
 @[simp]
-theorem edgeEquiv_flipEdges : edgeEquiv (move (flipEdges e₁ e₂)) = 1 := by
+theorem edgeEquiv_flipEdges {e₁ e₂ : Edge} : edgeEquiv (move (flipEdges e₁ e₂)) = 1 := by
   ext a
   refine a.inductionOn ?_
   intro a
@@ -241,7 +243,7 @@ theorem edgeEquiv_flipEdges : edgeEquiv (move (flipEdges e₁ e₂)) = 1 := by
 
 /-- A sequence of moves cycling `Corner.mk U R B`, `Corner.mk U B L`, and `Corner.mk U L F`, while
 fixing all edges. -/
-def cycleCornersAux : Moves :=
+private def cycleCornersAux : Moves :=
   [R, R, D, B, B, D, D, D, F, F, D, B, B, D, D, D, F, F, R, R]
 
 private theorem edgePieceEquiv_cycleCornersAux :
@@ -702,6 +704,8 @@ theorem isSolvable (cube : Rubik) : IsSolvable cube := by
 end Rubik
 
 namespace PRubik
+
+variable {cube : PRubik}
 
 /-- A valid cube is solvable, i.e. the invariant is a necessary and sufficient condition for
 solvability. -/
