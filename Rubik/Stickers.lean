@@ -302,12 +302,14 @@ theorem isAdjacent_toStickers (cube : Rubik) : (toStickers cube).IsAdjacent :=
 theorem isProper_toStickers (cube : Rubik) : (toStickers cube).IsProper :=
   cube.1.isProper_toStickers
 
+theorem isValid_toStickers (cube : Rubik) :
+    ((toStickers cube).toPRubik (isProper_toStickers _)).IsValid := by
+  simp_rw [toStickers, PRubik.toStickers_toPRubik]
+  exact cube.2
+
 @[simp]
 theorem toStickers_toRubik (cube : Rubik) :
-    (toStickers cube).toRubik (isProper_toStickers _) (by
-      simp_rw [toStickers, PRubik.toStickers_toPRubik]
-      exact Rubik.isValid cube
-    ) = cube :=
+    (toStickers cube).toRubik (isProper_toStickers _) (isValid_toStickers _) = cube :=
   Subtype.ext cube.1.toStickers_toPRubik
 
 end Rubik
