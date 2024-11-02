@@ -17,7 +17,7 @@ permutations of these tuples yield the other pieces in the same edge or corner. 
 for details on this assignment.
 
 `Edge` and `Corner` are then defined as quotients of `EdgePiece` and `CornerPiece` under the
-relation of being in the same edge or corner. As expected, there are `8` `Edge`s and `12` `Corner`s.
+relation of being in the same edge or corner. As expected, there are 8 `Edge`s and 12 `Corner`s.
 -/
 
 open Orientation
@@ -188,6 +188,10 @@ instance : DecidableEq Edge :=
 instance : Fintype Edge :=
   Quotient.fintype _
 
+@[simp]
+protected theorem eq {e₁ e₂ : EdgePiece} : (⟦e₁⟧ : Edge) = ⟦e₂⟧ ↔ e₁ ≈ e₂ :=
+  Quotient.eq
+
 /-- Builds an `Edge`, automatically inferring the adjacency condition. -/
 protected abbrev mk (a b : Orientation) (h : IsAdjacent a b := by decide) : Edge :=
   ⟦EdgePiece.mk a b h⟧
@@ -208,7 +212,7 @@ theorem toFinset_injective : Function.Injective toFinset := by
   intro e₁ e₂
   refine Quotient.inductionOn₂ e₁ e₂ ?_
   intro e₁ e₂ h
-  rwa [toFinset_mk, toFinset_mk, ← EdgePiece.equiv_def, ← Quotient.eq] at h
+  rwa [toFinset_mk, toFinset_mk, ← EdgePiece.equiv_def, ← Edge.eq] at h
 
 @[simp]
 theorem toFinset_inj (e₁ e₂ : Edge) : e₁.toFinset = e₂.toFinset ↔ e₁ = e₂ :=
@@ -260,7 +264,7 @@ theorem flipEquiv_mk (e : EdgePiece) : flipEquiv ⟦e⟧ = Equiv.swap e e.flip :
 theorem flipEquiv_of_ne {e : Edge} {a : EdgePiece} : e ≠ ⟦a⟧ → e.flipEquiv a = a := by
   refine e.inductionOn ?_
   intro e he
-  rw [ne_eq, Quotient.eq, @comm _ (· ≈ ·), EdgePiece.equiv_iff, not_or] at he
+  rw [ne_eq, Edge.eq, @comm _ (· ≈ ·), EdgePiece.equiv_iff, not_or] at he
   rw [flipEquiv_mk, Equiv.swap_apply_of_ne_of_ne he.1 he.2]
 
 @[simp]
@@ -550,6 +554,10 @@ instance : DecidableEq Corner :=
 instance : Fintype Corner :=
   Quotient.fintype _
 
+@[simp]
+protected theorem eq {c₁ c₂ : CornerPiece} : (⟦c₁⟧ : Corner) = ⟦c₂⟧ ↔ c₁ ≈ c₂ :=
+  Quotient.eq
+
 /-- Builds a `Corner`, automatically inferring the adjacency condition. -/
 protected abbrev mk (a b c : Orientation) (h : IsAdjacent₃ a b c := by decide) : Corner :=
   ⟦CornerPiece.mk a b c h⟧
@@ -570,7 +578,7 @@ theorem toFinset_injective : Function.Injective toFinset := by
   intro c₁ c₂
   refine Quotient.inductionOn₂ c₁ c₂ ?_
   intro c₁ c₂ h
-  rwa [toFinset_mk, toFinset_mk, ← CornerPiece.equiv_def, ← Quotient.eq] at h
+  rwa [toFinset_mk, toFinset_mk, ← CornerPiece.equiv_def, ← Corner.eq] at h
 
 @[simp]
 theorem toFinset_inj (c₁ c₂ : Corner) : c₁.toFinset = c₂.toFinset ↔ c₁ = c₂ :=
@@ -655,7 +663,7 @@ theorem rotateEquiv_of_ne {c : Corner} {a : CornerPiece} :
     c ≠ ⟦a⟧ → c.rotateEquiv a = a := by
   refine c.inductionOn ?_
   intro c hc
-  rw [ne_eq, Quotient.eq, @comm _ (· ≈ ·), CornerPiece.equiv_iff', not_or, not_or] at hc
+  rw [ne_eq, Corner.eq, @comm _ (· ≈ ·), CornerPiece.equiv_iff', not_or, not_or] at hc
   rw [rotateEquiv_mk, Equiv.cycle_apply_of_ne hc.1 hc.2.1 hc.2.2]
 
 theorem rotateEquiv_inv_of_ne {c : Corner} {a : CornerPiece} (hc : c ≠ ⟦a⟧) :

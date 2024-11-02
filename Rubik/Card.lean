@@ -150,7 +150,7 @@ def kerEdgeCornerEquiv :
       split_ifs with h
       · rw [eq_comm]
         simpa [edgeValue_mk] using h
-      · simp_rw [edgeValue_mk, ite_eq_then, neg_units_ne_self, imp_false, Decidable.not_not,
+      · simp_rw [edgeValue_mk, ite_eq_left_iff, neg_units_ne_self, imp_false, Decidable.not_not,
           ← edgeValue_eq_one] at h
         rwa [eq_comm, ← edgeValue_eq_neg_one (edgeEquiv_of_mem_ker_edgeCornerEquiv cube.2),
           ← Int.units_ne_iff_eq_neg]
@@ -169,7 +169,7 @@ def kerEdgeCornerEquiv :
     ext y
     · refine y.inductionOn ?_
       intro e
-      simp_rw [edgeValue_mk, coe_fn_mk, ite_eq_then, EdgePiece.flip_ne, imp_false, not_not]
+      simp_rw [edgeValue_mk, coe_fn_mk, ite_eq_left_iff, EdgePiece.flip_ne, imp_false, not_not]
       split_ifs with h
       · rw [h]
       · rw [← ne_eq, Int.units_ne_iff_eq_neg] at h

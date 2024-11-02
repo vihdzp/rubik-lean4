@@ -30,10 +30,6 @@ macro_rules
 macro_rules
   | `(#[ $elems,* ]) => `(Array.mk [ $elems,* ])
 
--- This should likely be upstreamed.
-set_option allowUnsafeReducibility true
-attribute [reducible] Array.mapM.map
-
 @[simp]
 theorem getElem_map {α β : Type*} (f : α → β) {n : ℕ} (v : Vector α n) (i : Nat)
     (h : i < (v.map f).size) : (v.map f)[i] = f v[i] :=

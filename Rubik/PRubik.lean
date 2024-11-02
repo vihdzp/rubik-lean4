@@ -299,7 +299,7 @@ theorem edgeValue_eq_neg_one (he : edgeEquiv cube = 1) {e : EdgePiece} :
   rw [edgeValue_eq_neg_one']
   refine ⟨fun h ↦ ?_, fun h ↦ h ▸ e.flip_ne⟩
   have : ⟦cube.edgePieceEquiv e⟧ = (⟦e⟧ : Edge) := by rw [← edgeEquiv_mk, he, Perm.one_apply]
-  rw [Quotient.eq, EdgePiece.equiv_iff] at this
+  rw [Edge.eq, EdgePiece.equiv_iff] at this
   obtain he | he := this
   · contradiction
   · rw [he]
@@ -330,7 +330,7 @@ theorem cornerValue_mk (cube : PRubik) (c : CornerPiece) :
 theorem cornerValue_eq_zero (hc : cornerEquiv cube = 1) {c : CornerPiece} :
     cornerValue cube ⟦c⟧ = 0 ↔ cube.cornerPieceEquiv c = c := by
   rw [cornerValue_mk, sub_eq_zero, CornerPiece.value_eq_iff_of_equiv, eq_comm]
-  rw [← Quotient.eq, ← cornerEquiv_mk, hc, Perm.one_apply]
+  rw [← Corner.eq, ← cornerEquiv_mk, hc, Perm.one_apply]
 
 theorem cornerValue_eq_one (hc : cornerEquiv cube = 1) {c : CornerPiece} :
     cornerValue cube ⟦c⟧ = 1 ↔ cube.cornerPieceEquiv c = c.cyclic := by
@@ -338,7 +338,7 @@ theorem cornerValue_eq_one (hc : cornerEquiv cube = 1) {c : CornerPiece} :
   rw [cornerValue_mk, CornerPiece.value_cyclic', CornerPiece.value_cyclic', sub_eq_iff_eq_add,
     add_comm, ← sub_eq_iff_eq_add, sub_sub, sub_sub, this, sub_zero,
     CornerPiece.value_eq_iff_of_equiv, ← CornerPiece.cyclic_inj, CornerPiece.cyclic₃]
-  rw [← Quotient.eq, Corner.mk_cyclic, Corner.mk_cyclic, ← cornerEquiv_mk, hc, Perm.one_apply]
+  rw [← Corner.eq, Corner.mk_cyclic, Corner.mk_cyclic, ← cornerEquiv_mk, hc, Perm.one_apply]
 
 theorem cornerValue_eq_two (hc : cornerEquiv cube = 1) {c : CornerPiece} :
     cornerValue cube ⟦c⟧ = 2 ↔ cube.cornerPieceEquiv c = c.cyclic.cyclic := by
@@ -346,7 +346,7 @@ theorem cornerValue_eq_two (hc : cornerEquiv cube = 1) {c : CornerPiece} :
   rw [cornerValue_mk, sub_eq_iff_eq_add, CornerPiece.value_cyclic', add_comm, sub_eq_iff_eq_add,
     add_assoc, this, add_zero, CornerPiece.value_eq_iff_of_equiv,
     ← CornerPiece.cyclic_inj, ← CornerPiece.cyclic_inj, CornerPiece.cyclic₃]
-  rw [← Quotient.eq, Corner.mk_cyclic, ← cornerEquiv_mk, hc, Perm.one_apply]
+  rw [← Corner.eq, Corner.mk_cyclic, ← cornerEquiv_mk, hc, Perm.one_apply]
 
 theorem cornerValue_mul (hc₁ : cornerEquiv cube₁ = 1) (hc₂ : cornerEquiv cube₂ = 1) (c : Corner) :
     cornerValue (cube₁ * cube₂) c = cornerValue cube₁ c + cornerValue cube₂ c := by

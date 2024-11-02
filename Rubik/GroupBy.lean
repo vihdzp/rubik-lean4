@@ -196,16 +196,12 @@ theorem groupBy_append_cons {r : α → α → Bool} {l : List α} (hn : l ≠ [
   rwa [head_cons]
 
 theorem join_head {l : List (List α)} (hl : l ≠ []) (hl' : l.head hl ≠ []) :
-    l.join.head ((join_ne_nil _).2 ⟨_, head_mem hl, hl'⟩) = (l.head hl).head hl' := by
+    l.join.head (join_ne_nil_iff.2 ⟨_, head_mem hl, hl'⟩) = (l.head hl).head hl' := by
   cases l with
   | nil => contradiction
   | cons a l =>
     simp_rw [join_cons, head_cons]
     exact head_append_of_ne_nil _
-
-theorem head_mem_head? : ∀ {l : List α} (h : l ≠ []), head l h ∈ head? l
-  | [], h => by contradiction
-  | a :: l, _ => rfl
 
 theorem groupBy_join {r : α → α → Bool} {l : List (List α)} (hn : [] ∉ l)
     (hc : ∀ m ∈ l, m.Chain' fun x y ↦ r x y)
@@ -220,7 +216,7 @@ theorem groupBy_join {r : α → α → Bool} {l : List (List α)} (hn : [] ∉ 
       exact hc _ (mem_cons_of_mem a hm)
     · intro h
       rw [chain'_cons'] at hc'
-      obtain ⟨x, hx, _⟩ := (join_ne_nil _).1 h
+      obtain ⟨x, hx, _⟩ := join_ne_nil_iff.1 h
       obtain ⟨_, _, H⟩ := hc'.1 (l.head (ne_nil_of_mem hx)) (head_mem_head? _)
       rwa [join_head]
 

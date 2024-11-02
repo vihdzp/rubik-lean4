@@ -5,7 +5,6 @@ Authors: Violeta Hernández Palacios
 -/
 import Mathlib.Data.PNat.Defs
 import Mathlib.Order.TypeTags
-import Rubik.Chain
 import Rubik.GroupBy
 
 -- https://github.com/leanprover-community/mathlib4/pull/17105
@@ -40,7 +39,7 @@ theorem runLength_nil : RunLength ([] : List α) = [] :=
 
 @[simp]
 theorem runLength_eq_nil {l : List α} : RunLength l = [] ↔ l = [] := by
-  rw [RunLength, pmap_eq_nil, groupBy_eq_nil]
+  rw [RunLength, pmap_eq_nil_iff, groupBy_eq_nil]
 
 theorem runLength_append {n : ℕ} (hn : 0 < n) {a : α} {l : List α} (ha : a ∉ l.head?) :
     (replicate n a ++ l).RunLength = (⟨n, hn⟩, a) :: l.RunLength := by
@@ -49,7 +48,7 @@ theorem runLength_append {n : ℕ} (hn : 0 < n) {a : α} {l : List α} (ha : a �
   apply groupBy_append
   case hn => simpa using hn.ne'
   · simp_rw [beq_iff_eq]
-    exact chain'_replicate n a
+    exact chain'_replicate_of_rel n (refl a)
   · cases l with
     | nil => simp
     | cons b l =>
@@ -177,7 +176,7 @@ theorem groupBy_beq (l : List α) :
     · rfl
     · simp
     · simp_rw [beq_iff_eq]
-      exact chain'_replicate _ _
+      exact chain'_replicate_of_rel n (refl a)
     · intro h
       rw [getLast_replicate, beq_eq_false_iff_ne]
       rintro rfl
