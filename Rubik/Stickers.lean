@@ -12,28 +12,9 @@ This is where we also implement the `Repr` instance on `PRubik` and `Rubik`.
 
 open Orientation Batteries
 
--- This is required in order to work with these large lists. See https://leanprover.zulipchat.com/#narrow/stream/348111-batteries/topic/Large.20vector.20hangs/near/473234634
---
--- This code is due to Mario Carneiro in that same thread.
-open Lean
-macro_rules
-  | `([ $elems,* ]) => do
-    let rec expandListLit (i : Nat) (skip : Bool) (result : TSyntax `term) : MacroM Syntax := do
-      match i, skip with
-      | 0,   _     => pure result
-      | i+1, true  => expandListLit i false result
-      | i+1, false => expandListLit i true  (← ``(List.cons $(⟨elems.elemsAndSeps.get! i⟩) $result))
-    let size := elems.elemsAndSeps.size
-    expandListLit size (size % 2 == 0) (← ``(List.nil))
-
 -- Upstreamed from https://github.com/leanprover/lean4/pull/5446
 macro_rules
   | `(#[ $elems,* ]) => `(Array.mk [ $elems,* ])
-
-@[simp]
-theorem getElem_map {α β : Type*} (f : α → β) {n : ℕ} (v : Vector α n) (i : Nat)
-    (h : i < (v.map f).size) : (v.map f)[i] = f v[i] :=
-  Array.getElem_map f _ _ _
 
 /-- The list of stickers in a Rubik's cube. These should be given in the following order:
 

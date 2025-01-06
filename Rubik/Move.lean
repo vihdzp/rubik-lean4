@@ -180,7 +180,7 @@ theorem getLast?_symm (m : Moves) : getLast? m.symm = head? m := by
   | nil => rfl
   | cons a m =>
     rw [symm_cons, getLast?_append, getLast?_cons_cons, getLast?_cons_cons, getLast?_singleton,
-      Option.or_some, head?_cons]
+      Option.some_or, head?_cons]
 
 /-- Removes any instances of four consecutive rotations from a list of moves.
 
