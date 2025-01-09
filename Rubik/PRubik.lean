@@ -378,9 +378,7 @@ def swapEdges {a b : Orientation} (h : IsAdjacent a b) : PRubik where
   edgePieceEquiv := (swap ⟨a, b, h⟩ ⟨a, cross a b, h.cross_left.symm⟩).trans
     (swap ⟨b, a, h.symm⟩ ⟨cross a b, a, h.cross_left⟩)
   cornerPieceEquiv := 1
-  edge_flip := by
-    revert a b
-    decide
+  edge_flip := by decide +revert
   corner_cyclic _ := rfl
 
 @[simp]
