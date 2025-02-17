@@ -1,4 +1,5 @@
 import Mathlib.Algebra.Group.Subgroup.Ker
+import Mathlib.Algebra.Ring.CharZero
 import Mathlib.GroupTheory.Perm.Sign
 import Mathlib.Data.Fintype.Units
 import Rubik.Piece

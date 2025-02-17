@@ -60,7 +60,7 @@ theorem runLength_append_cons {n : ℕ} (hn : 0 < n) {a b : α} {l : List α} (h
 
 theorem flatten_map_runLength (l : List α) :
     (l.RunLength.map fun x ↦ replicate x.1 x.2).flatten = l := by
-  rw [RunLength, map_pmap, (pmap_eq_self _ _).2, flatten_splitBy]
+  rw [RunLength, map_pmap, pmap_eq_self.2, flatten_splitBy]
   intro m hm
   have := chain'_of_mem_splitBy hm
   simp_rw [beq_iff_eq, chain'_eq_iff_eq_replicate] at this
